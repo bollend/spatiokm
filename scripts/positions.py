@@ -1,28 +1,7 @@
 import numpy as np
 
-def T0_to_IC(omega, ecc, P, T0):
-    '''
-    Set T0 to time of inferior conjunction by shifting from
-    time of periastron passage.
-
-    Parameters
-    ----------
-    omega : float
-        Longitude of the ascending node [rad]
-    ecc : float
-        Orbital eccentricity (0-1)
-    P : float
-        Orbital period of the binary system
-    T0 : float
-        Time of periastron passage
-
-    Returns
-    -------
-    Time of inferior conjunction : float
-        The time when the primary component is closest to the observer
-    '''
 def positions(position_primary, position_secondary,\
-             point_primary, jet_angle, inclination):
+             point_on_primary, jet_angle, inclination, N_points_pathlength):
     """
     Determines the coordinates of the gridpoints along
     the line-of-sight through the jet and their angle in the jet
@@ -33,13 +12,15 @@ def positions(position_primary, position_secondary,\
         The (x,y,z)-coordinates of the primary in AU
     position_secondary : numpy array
         The (x,y,z)-coordinates of the secondary in AU
-    point_primary : numpy array
+    point_on_primary : numpy array
         The (x,y,z)-coordinates of the point on the primary in AU
         relative to the centre of the primary
     jet_angle : float
         The half opening angle of the jet in radians
     inclination : float
         The inclination angle of the binary system in radians
+    N_points_pathlength : integer
+        The number of points through the jet along the line-of-sight
 
     Returns
     -------
@@ -57,49 +38,58 @@ def positions(position_primary, position_secondary,\
         (delta_s = s_n+1 - s_n)
 
     """
-    xp = pos_prim[0] + p_prim[0]
-    yp = pos_prim[1] + p_prim[1]
-    zp = p_prim[2]
-    s = np.zeros(Npoints_pathlength)             #path lenght to primary of each point in jet
-    position = np.zeros((Npoints_pathlength,3))    #position of each point in jet in 3D
-    r = np.zeros((Npoints_pathlength,3))           # position of each point with secondary as origin
-    r_unit = np.zeros((Npoints_pathlength,3))
-    theta_pos = np.zeros(Npoints_pathlength)
-    # sqrt = (2*(ys-yp)*np.sin(incl))**2 - 4*(np.cos(incl)**2*np.tan(alp)**2 - np.sin(incl)**2)*(- (xp-xs)**2 - (yp - ys)**2)
-    sqrt = (2*zp*np.cos(inclination)*np.tan(alpha)**2 + 2*(ys - yp)*np.sin(inclination))**2 - 4*(np.cos(inclination)**2*np.tan(alpha)**2 - np.sin(inclination)**2)*(zp**2*np.tan(alpha)**2-(xp-xs)**2-(yp-ys)**2)
+
+    xp = position_primary[0] + point_on_primary[0]
+    yp = position_primary[1] + point_on_primary[1]
+    zp = point_on_primary[2]
+
+    pathlength_parameter_points = np.zeros(N_points_pathlength)             #path length to primary of each point in jet
+    position_points_LOS = np.zeros((N_points_pathlength,3))    #position of each point in the jet along the LOS in (x,y,z)-coordinates
+    position_points_jet_origin = np.zeros((N_points_pathlength,3))           # position of each point with secondary as origin
+    r_unit_positions = np.zeros((N_points_pathlength,3))
+    angle_positions_jet = np.zeros(N_points_pathlength)
+
+    sqrt = (2 * zp * np.cos(inclination) * np.tan(jet_angle)**2 + 2 * (ys - yp)\
+            * np.sin(inclination))**2 - 4 * (np.cos(inclination)**2\
+            * np.tan(jet_angle)**2 - np.sin(inclination)**2)\
+            * (zp**2 * np.tan(jet_angle)**2 - (xp - xs)**2 - (yp - ys)**2)
 
     if sqrt < 0:
-        s1 = 0
-        s2 = 0
-        ds = 0
+        jet_entry = 0
+        jet_exit = 0
+        delta_s = 0
 
-        s = np.zeros(Npoints_pathlength)
+        s = np.zeros(N_points_pathlength)
+
     else:
 
-        # s1 = (-1*( 2*(ys - yp)*np.sin(incl)) + (sqrt)**.5)/(2*(np.cos(incl)**2*np.tan(alp)**2 - np.sin(incl)**2))
-        # s2 = (-1*( 2*(ys - yp)*np.sin(incl)) - (sqrt)**.5)/(2*(np.cos(incl)**2*np.tan(alp)**2 - np.sin(incl)**2))
-        s1 = (-1*( 2*zp*np.cos(inclination)*np.tan(alpha)**2 + 2*(ys - yp)*np.sin(inclination)) + (sqrt)**.5)/(2*(np.cos(inclination)**2*np.tan(alpha)**2 - np.sin(inclination)**2))
-        s2 = (-1*( 2*zp*np.cos(inclination)*np.tan(alpha)**2 + 2*(ys - yp)*np.sin(inclination)) - (sqrt)**.5)/(2*(np.cos(inclination)**2*np.tan(alpha)**2 - np.sin(inclination)**2))
+        jet_entry = (-1 * (2 * zp * np.cos(inclination) * np.tan(jet_angle)**2 \
+            + 2*(ys - yp) * np.sin(inclination)) \
+            + (sqrt)**.5) / (2 * (np.cos(inclination)**2 * np.tan(jet_angle)**2\
+            - np.sin(inclination)**2))
+        jet_exit = (-1 * ( 2 * zp * np.cos(inclination) * np.tan(jet_angle)**2 \
+            + 2 * (ys - yp) * np.sin(inclination)) \
+            - (sqrt)**.5) / (2 * (np.cos(inclination)**2 * np.tan(jet_angle)**2 \
+            - np.sin(inclination)**2))
 
-        if s1 < 0 and s2 < 0:
-            s1 = 0
-            s2 = 0
-            ds = 0
-        elif inclination > alpha:
+        if jet_entry < 0 and jet_exit < 0:
+            jet_entry = 0
+            jet_exit = 0
+            delta_s = 0
 
-            s_min = s1
-            s_max = s2
-            ds = (s_max - s_min)/(Npoints_pathlength-1)
-            s = np.arange(s_min, s_max + 0.1*ds, ds)
+        elif inclination > jet_angle:
+
+            delta_s = (jet_exit - jet_entry) / (N_points_pathlength - 1)
+            s = np.arange(jet_entry, jet_exit + 0.1 * delta_s, delta_s)
             position[:,0] += xp
-            position[:,1] += yp + s*np.sin(inclination)
-            position[:,2] += zp + s*np.cos(inclination)
+            position[:,1] += yp + s * np.sin(inclination)
+            position[:,2] += zp + s * np.cos(inclination)
             r[:,:] = position[:,:] - pos_sec
-            r_tot = (r[:,0]**2+r[:,1]**2+r[:,2]**2)**.5
-            r_unit[:,0]= r[:,0]/r_tot
-            r_unit[:,1]= r[:,1]/r_tot
-            r_unit[:,2]= r[:,2]/r_tot
-            theta_pos[:] = np.arctan((r[:,0]**2 + r[:,1]**2)**.5/r[:,2])
+            r_tot = (r[:,0]**2 + r[:,1]**2 + r[:,2]**2)**.5
+            r_unit[:,0]= r[:,0] / r_tot
+            r_unit[:,1]= r[:,1] / r_tot
+            r_unit[:,2]= r[:,2] / r_tot
+            theta_pos[:] = np.arctan((r[:,0]**2 + r[:,1]**2)**.5 / r[:,2])
             # pl.plot(xp,yp, 'o', color = 'k')
             # pl.plot(xs, ys,'o')
             # pl.plot(position[:,0], position[:,1])
@@ -107,21 +97,21 @@ def positions(position_primary, position_secondary,\
             # pl.ylim(-2.,2.)
             # pl.show()
 
-        elif inclination < alpha:
+        elif inclination < jet_angle:
 
-            s_min = np.max([s1,s2])
-            s_max = 5.*s_min
-            ds = (s_max - s_min)/(Npoints_pathlength-1)
-            s = np.arange(s_min, s_max + 0.1*ds, ds)
+            jet_entry = np.max([jet_entry,jet_exit])
+            jet_exit = 5. * jet_entry
+            delta_s = (jet_exit - jet_entry) / (N_points_pathlength-1)
+            s = np.arange(jet_entry, jet_exit + 0.1*delta_s, delta_s)
             position[:,0] += xp
-            position[:,1] += yp + s*np.sin(inclination)
-            position[:,2] += zp + s*np.cos(inclination)
+            position[:,1] += yp + s * np.sin(inclination)
+            position[:,2] += zp + s * np.cos(inclination)
             r[:,:] = position[:,:] - pos_sec
-            r_tot = (r[:,0]**2+r[:,1]**2+r[:,2]**2)**.5
-            r_unit[:,0]= r[:,0]/r_tot
-            r_unit[:,1]= r[:,1]/r_tot
-            r_unit[:,2]= r[:,2]/r_tot
-            theta_pos[:] = np.arctan((r[:,0]**2 + r[:,1]**2)**.5/r[:,2])
+            r_tot = (r[:,0]**2 + r[:,1]**2 + r[:,2]**2)**.5
+            r_unit[:,0]= r[:,0] / r_tot
+            r_unit[:,1]= r[:,1] / r_tot
+            r_unit[:,2]= r[:,2] / r_tot
+            theta_pos[:] = np.arctan((r[:,0]**2 + r[:,1]**2)**.5 / r[:,2])
             # pl.plot(xp,yp, 'o', color = 'k')
             # pl.plot(xs, ys,'o')
             # pl.plot(position[:,0], position[:,1])
@@ -129,4 +119,4 @@ def positions(position_primary, position_secondary,\
             # pl.ylim(-2.,2.)
             # pl.show()
 
-    return s1, s2, s, ds, position, r, r_unit, theta_pos
+    return jet_entry, jet_exit, s, delta_s, position, r, r_unit, theta_pos
