@@ -43,10 +43,17 @@ def positions(position_primary, position_secondary,\
     yp = position_primary[1] + point_on_primary[1]
     zp = point_on_primary[2]
 
-    pathlength_parameter_points = np.zeros(N_points_pathlength)             #path length to primary of each point in jet
-    position_points_LOS = np.zeros((N_points_pathlength,3))    #position of each point in the jet along the LOS in (x,y,z)-coordinates
-    position_points_jet_origin = np.zeros((N_points_pathlength,3))           # position of each point with secondary as origin
+    # Path length to primary of each point in jet
+    pathlength_parameter_points = np.zeros(N_points_pathlength)
+    # Position of each point in the jet along the LOS in (x,y,z)-coordinates
+    position_points_LOS = np.zeros((N_points_pathlength,3))
+    # Position of each point with secondary as origin
+    position_points_jet_origin = np.zeros((N_points_pathlength,3))
+    # Unit vector of each line from the secondary component to the point in
+    # the jet
     r_unit_positions = np.zeros((N_points_pathlength,3))
+    # Angle between the line from the secondary component to the point in
+    # the jet and the jet axis
     angle_positions_jet = np.zeros(N_points_pathlength)
 
     sqrt = (2 * zp * np.cos(inclination) * np.tan(jet_angle)**2 + 2 * (ys - yp)\
