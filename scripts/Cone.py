@@ -3,6 +3,7 @@ This class implements a cone geometry and associated functions
 """
 
 from sympy.geometry.point import Point3D
+from sympy.geometry import Ray3D
 import numpy as np
 
 class Cone3D(object):
@@ -58,4 +59,30 @@ class Cone3D(object):
                              ' between 0 and pi/2')
         self._angle = value
 
-    def intersection():
+    def intersection(self, ray):
+        """
+        Determines the coordinates of the intersection between the jet cone and
+        the line-of-sight.
+
+        Parameters
+        ==========
+        ray : Ray3D (sympy)
+            The ray along the line-of-sight starting from the surface of the
+            primary.
+
+        Returns
+        =======
+        jet_entry_parameter : float
+            Value of line-of-sight parameter 's' for which the line-of-sight
+            enters the jet.
+        jet_exit_parameter : float
+            Value of line-of-sight parameter 's' for which the line-of-sight
+            leaves the jet.
+        jet_entry : Point3D
+            Point where the line-of-sight enters the jet.
+        jet_exit : Point3D
+            Point where the line-of-sight leaves the jet
+
+        """
+        if not isintance(ray, Ray3D):
+            raise TypeError('The ray should be of type Ray3D')
