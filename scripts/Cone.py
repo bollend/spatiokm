@@ -4,6 +4,7 @@ This class implements a cone geometry and associated functions
 
 from sympy.geometry.point import Point3D
 from sympy.geometry import Ray3D
+from sympy.geometry import Line
 import numpy as np
 
 class Cone3D(object):
@@ -15,12 +16,12 @@ class Cone3D(object):
     Parameters
     ==========
 
-    centre : Point, optional
-        Default value is Point3D(0, 0, 0)
+    centre : array, optional
+        Default value is [0, 0, 0]
     angle : float
         The half opening angle of the cone in radians
-    orientation : Point or a direction vector
-        Default value is Point3D(0, 0, 1)
+    orientation : array
+        Default value is [0, 0, 1]
 
     Attributes
     ==========
@@ -41,8 +42,8 @@ class Cone3D(object):
 
     """
 
-    def __init__(self, angle, centre=Point3D(0, 0, 0),\
-                orientation=Point3D(0, 0, 1)):
+    def __init__(self, angle, centre=np.array([0, 0, 0]),\
+                orientation=np.array([0, 0, 1])):
 
         self._angle = angle
         self.centre = centre
@@ -59,14 +60,17 @@ class Cone3D(object):
                              ' between 0 and pi/2')
         self._angle = value
 
-    def intersection(self, ray):
+    def intersection(self, origin, ray):
         """
         Determines the coordinates of the intersection between the jet cone and
         the line-of-sight.
 
         Parameters
         ==========
-        ray : Ray3D (sympy)
+        origin : array
+            The point on the surface of the primary which the line-of-sight
+            intersects
+        ray : array
             The ray along the line-of-sight starting from the surface of the
             primary.
 
@@ -78,21 +82,28 @@ class Cone3D(object):
         jet_exit_parameter : float
             Value of line-of-sight parameter 's' for which the line-of-sight
             leaves the jet.
-        jet_entry : Point3D
+        jet_entry : array
             Point where the line-of-sight enters the jet.
-        jet_exit : Point3D
+        jet_exit : array
             Point where the line-of-sight leaves the jet
 
         """
-        if isinstance(ray, Ray3D):
-            if not
-            #solve equation of form at**2 + bt + c = 0
-            #first determine a, b, and c
-            a = ()
+        #solve equation of form at**2 + bt + c = 0
+        #first determine a, b, and c
+        CO = origin - self.centre
+        a = np.dot(ray, self.orientation)**2 - np.cos(self._angle)**2
+        b = 2 * (np.dot(ray, self.orientation) * np.dot(CO, self.orientation)\
+            - np.dot(ray, CO) * np.cos(self._angle)**2
+        c = np.dot(CO, self.orientation)**2 - \
+            np.dot(CO,CO) * np.cos(self._angle)**2
+        # Calculate the determinant Delta
+        Delta = b**2 - 4 * a * c
 
 
-        if not isintance(ray, Ray3D):
-            raise TypeError('The ray should be of type Ray3D')
+
+
+        if not isintance(ray, np.ndarray):
+            raise TypeError('The ray should be an numpy array')
 
 
     # def equation(self, x='x', y='y', z='z'):
