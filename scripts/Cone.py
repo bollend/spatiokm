@@ -203,3 +203,5 @@ class Cone3D(object):
 
 
         return jet_entry_parameter, jet_exit_parameter, positions_along_los
+
+        def velocity_density():
