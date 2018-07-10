@@ -48,7 +48,7 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
 
     Returns
     -------
-    (x,y,z) coordinates: numpy.ndarray
+    grid_primary : numpy array
         The coordinates of the gridpoints relative to the centre of the
         evolved component in an array with dimensions (Npoints, 3)
     '''
