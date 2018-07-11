@@ -7,36 +7,52 @@ from sympy.geometry import Ray3D
 from sympy.geometry import Line
 import numpy as np
 
-class Cone3D(object):
-    """ A 3d cone object representing a stellar jet
+class Jet_model(object):
+    """ A 3d model representing a stellar jet in a binary system
 
-    The cone can be initialised with a half-opening angle.
+    The jet cone can be initialised with a half-opening angle.
     Origin and orientation are optional.
 
     Parameters
     ==========
 
-    jet_centre : array, optional
-        Default value is [0, 0, 0]
-    jet_angle : float
-        The half opening angle of the cone in radians.
     inclination : float
         Inclination angle of the orbital plane of the binary system.
+    jet_angle : float
+        The half opening angle of the cone in radians.
+    velocity_axis : float
+        The velocity along the jet axis
+    velocity_edge : float
+        The velocity along the jet edge
+    jet_type : string
+        The jet configuration (disk wind, nested cosine or x-wind, stellar jet)
+    jet_centre : array, optional
+        Default value is [0, 0, 0]
+    jet_inner_angle : float, optional
+        The inner angle of the boundary between two jet regions. Default value is None.
+    velocity_inner : float
+        The velocity at the inner jet angle boundary. Default value is None.
     orientation : array
         Default value is [0, 0, 1]
 
     Attributes
     ==========
 
-    jet_centre
-    jet_angle
     inclination
+    jet_angle
+    velocity_axis
+    velocity_edge
+    jet_type
+    jet_centre
+    jet_inner_angle
+    velocity_boundary
     orientation
+
 
     Raises
     ======
 
-    TypeError
+    ???TypeError
         When 'jet_centre' is not a numpy array.
 
     Examples
@@ -45,11 +61,20 @@ class Cone3D(object):
 
     """
 
-    def __init__(self, jet_angle, inclination, jet_centre=np.array([0, 0, 0]),\
-                orientation=np.array([0, 0, 1])):
+    def __init__(self, inclination, jet_angle, velocity_axis, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]), jet_inner_angle=None,\
+                velocity_boundary=None, orientation=np.array([0, 0, 1]), z_h):
 
         self.jet_angle = jet_angle
+        self.jet_inner_angle = jet_inner_angle
+        self.velocity_axis = velocity_axis
+        self.velocity_edge = velocity_edge
+        self.origin_type = origin_type
+        if jet_type == 'disk_wind':
+            jet_centre[2] += z_h
         self.jet_centre = jet_centre
+        self.jet_inner_angle = jet_inner_angle
+        self.velocity_boundary = velocity_boundary
         self.orientation = orientation
         self.inclination = inclination
 
@@ -132,7 +157,7 @@ class Cone3D(object):
             # The ray does not intersect the cone
             entry_parameter, exit_parameter = None, None
         else:
-            # The ray intersects the cone at an entry point and exit point
+            # The ray intersects the cone at an entry and exit point
             parameter_1 = (-b - Delta**.5) / (2 * a)
             parameter_2 = (-b + Delta**.5) / (2 * a)
             entry_parameter = min(parameter_1, parameter_2)
@@ -174,7 +199,7 @@ class Cone3D(object):
         jet_entry_parameter, jet_exit_parameter = self.entry_exit_ray_cone(origin_ray, ray)
 
         if jet_entry_parameter == None:
-            #The ray does not intersect the cone
+            # The ray does not intersect the cone
             jet_entry, jet_exit = None, None
         else:
             # The ray intersects the cone at s1 and s2
@@ -189,7 +214,7 @@ class Cone3D(object):
                 # will have a jet entry and exit point.
                 jet_positions_parameters = np.linspace(jet_entry_parameter, \
                                     jet_exit_parameter, number_of_gridpoints)
-                positions_along_los = origin_ray + np.outer(jet_positions_parameters, ray)
+                positions = origin_ray + np.outer(jet_positions_parameters, ray)
 
             elif self.jet_angle > self.inclination:
                 # The jet half-opening angle is larger than
@@ -199,9 +224,65 @@ class Cone3D(object):
                 jet_exit_parameter = None
                 jet_positions_parameters = np.linspace(jet_entry_parameter,\
                                     jet_entry_parameter + 5., number_of_gridpoints)
-                positions_along_los = origin_ray + np.outer(jet_positions_parameters, ray)
+                positions = origin_ray + np.outer(jet_positions_parameters, ray)
 
 
-        return jet_entry_parameter, jet_exit_parameter, positions_along_los
+        return jet_entry_parameter, jet_exit_parameter, positions
 
-        def velocity_density():
+        def velocity(self, phase, positions_LOS, rv_secondary):
+            """
+            Determines the velocity at each grid point along the line-of-sight
+            through the jet
+
+            Parameters
+            ==========
+            phase : float
+                Orbital phase
+            positions_LOS : array
+                The positions of the gridpoints along the line-of-sight that go
+                through the jet.
+            rv_secondary : float
+                The radial velocity of the secondary component at that orbital phase
+            Returns
+            =======
+            rad_velocity : array
+                The radial velocity for each grid point along the line-of-sight
+            """
+
+            if self.jet_type == "stellar jet":
+                vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
+                            * (polar_angle_gridpoints / self.jet_angle)**power
+                radvel_gridpoints = - vel_gridpoints * np.sum(R_unit*n_unit, axis = 1) - Orbit_sec*v_prim*np.sin(w*t)
+
+            elif self.jet_type == "x-wind":
+                rad_velocity = self.velocity_xwind(phase, positions_LOS, rv_secondary)
+
+            elif self.jet_type == "disk wind":
+                rad_velocity = self.velocity_disk_wind(phase, positions_LOS, rv_secondary)
+            return rad_velocity
+
+        def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
+            """
+            Determines the velocity at each grid point along the line-of-sight
+            through the jet for the stellar jet model.
+
+            Parameters
+            ==========
+            phase : float
+                Orbital phase
+            positions_LOS : array
+                The positions of the gridpoints along the line-of-sight that go
+                through the jet.
+            rv_secondary : float
+                The radial velocity of the secondary component at that orbital phase
+            Returns
+            =======
+            radvel_gridpoints : array
+                The radial velocity for each grid point along the line-of-sight
+            """
+            vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
+                        * (polar_angle_gridpoints / self.jet_angle)**power
+            radvel_gridpoints = - vel_gridpoints * np.sum(R_unit*n_unit, axis = 1) - Orbit_sec*v_prim*np.sin(w*t)
+
+
+            return radvel_gridpoints
