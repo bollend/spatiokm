@@ -32,7 +32,7 @@ class Jet_model(object):
         The inner angle of the boundary between two jet regions. Default value is None.
     velocity_inner : float
         The velocity at the inner jet angle boundary. Default value is None.
-    orientation : array
+    jet_orientation : array
         Default value is [0, 0, 1]
 
     Attributes
@@ -46,7 +46,7 @@ class Jet_model(object):
     jet_centre
     jet_inner_angle
     velocity_boundary
-    orientation
+    jet_orientation
 
 
     Raises
@@ -63,8 +63,9 @@ class Jet_model(object):
 
     def __init__(self, inclination, jet_angle, velocity_axis, velocity_edge,\
                 jet_type, jet_centre=np.array([0, 0, 0]), jet_inner_angle=None,\
-                velocity_boundary=None, orientation=np.array([0, 0, 1]), z_h):
+                velocity_boundary=None, jet_orientation=np.array([0, 0, 1]), z_h):
 
+        self.inclination = inclination
         self.jet_angle = jet_angle
         self.jet_inner_angle = jet_inner_angle
         self.velocity_axis = velocity_axis
@@ -75,8 +76,8 @@ class Jet_model(object):
         self.jet_centre = jet_centre
         self.jet_inner_angle = jet_inner_angle
         self.velocity_boundary = velocity_boundary
-        self.orientation = orientation
-        self.inclination = inclination
+        self.jet_orientation = jet_orientation
+        self.ray = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
 
     @property
     def jet_angle(self):
@@ -99,7 +100,7 @@ class Jet_model(object):
             raise ValueError(''' The inclination angle of the binary system should be
                             between 0 and pi/2 radians.
                             ''')
-        return self._inclination
+        self._inclination = value
 
     def determinant(a, b, c):
         """
@@ -114,15 +115,16 @@ class Jet_model(object):
         """
         return vector / np.linalg.norm(vector)
 
-    def angle_between(v1, v2):
+    def angle_between(v1, v2, unit=False):
         """
         Returns the angle in radians between vectors 'v1' and 'v2'
         """
-        v1_u = unit_vector(v1)
-        v2_u = unit_vector(v2)
+        if unit==False:
+            v1_u = unit_vector(v1)
+            v2_u = unit_vector(v2)
         return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
-    def entry_exit_ray_cone(self, origin_ray, ray):
+    def entry_exit_ray_cone(self, origin_ray):
         """
         Calculate the determinant of the second order equation for the intersection
         of a ray and a cone
@@ -132,9 +134,6 @@ class Jet_model(object):
         origin_ray : array
             The point on the surface of the primary which the line-of-sight
             intersects
-        ray : array
-            The ray along the line-of-sight starting from the surface of the
-            primary.
 
         Returns
         =======
@@ -145,10 +144,10 @@ class Jet_model(object):
 
         """
         CO = origin_ray - self.jet_centre
-        a = np.dot(ray, self.orientation)**2 - np.cos(self.jet_angle)**2
-        b = 2 * (np.dot(ray, self.orientation) * np.dot(CO, self.orientation)\
-            - np.dot(ray, CO) * np.cos(self.jet_angle)**2)
-        c = np.dot(CO, self.orientation)**2 - \
+        a = np.dot(self.ray, self.jet_orientation)**2 - np.cos(self.jet_angle)**2
+        b = 2 * (np.dot(self.ray, self.jet_orientation) * np.dot(CO, self.jet_orientation)\
+            - np.dot(self.ray, CO) * np.cos(self.jet_angle)**2)
+        c = np.dot(CO, self.jet_orientation)**2 - \
             np.dot(CO,CO) * np.cos(self.jet_angle)**2
 
         Delta = b**2 - 4 * a * c
@@ -166,7 +165,7 @@ class Jet_model(object):
         return entry_parameter, exit_parameter
 
 
-    def intersection(self, origin_ray, ray, number_of_gridpoints):
+    def intersection(self, origin_ray, number_of_gridpoints):
         """
         Determines the coordinates of the intersection between the jet cone and
         the line-of-sight.
@@ -176,9 +175,6 @@ class Jet_model(object):
         origin_ray : array
             The point on the surface of the primary which the line-of-sight
             intersects
-        ray : array
-            The unit vector of the ray along the line-of-sight starting from the surface of the
-            primary.
         number_of_gridpoints : integer
             The number of gridpoints along the line-of-sight through the jet
         Returns
@@ -196,7 +192,7 @@ class Jet_model(object):
         """
         # Calculate the determinant Delta of the second order equation for the
         # intersection of the ray and the cone
-        jet_entry_parameter, jet_exit_parameter = self.entry_exit_ray_cone(origin_ray, ray)
+        jet_entry_parameter, jet_exit_parameter = self.entry_exit_ray_cone(origin_ray, self.ray)
 
         if jet_entry_parameter == None:
             # The ray does not intersect the cone
@@ -214,7 +210,7 @@ class Jet_model(object):
                 # will have a jet entry and exit point.
                 jet_positions_parameters = np.linspace(jet_entry_parameter, \
                                     jet_exit_parameter, number_of_gridpoints)
-                positions = origin_ray + np.outer(jet_positions_parameters, ray)
+                positions = origin_ray + np.outer(jet_positions_parameters, self.ray)
 
             elif self.jet_angle > self.inclination:
                 # The jet half-opening angle is larger than
@@ -224,7 +220,7 @@ class Jet_model(object):
                 jet_exit_parameter = None
                 jet_positions_parameters = np.linspace(jet_entry_parameter,\
                                     jet_entry_parameter + 5., number_of_gridpoints)
-                positions = origin_ray + np.outer(jet_positions_parameters, ray)
+                positions = origin_ray + np.outer(jet_positions_parameters, self.ray)
 
 
         return jet_entry_parameter, jet_exit_parameter, positions
@@ -250,10 +246,14 @@ class Jet_model(object):
             """
 
             if self.jet_type == "stellar jet":
+                positions_vector_relto_jet_origin_unit = self.unit_vector(positions_LOS - self.jet_centre)
+                polar_angle_gridpoints = angle_between(positions_vector_relto_jet_origin_unit, self.direction, unit=True)
+                polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)] \
+                    = np.pi - polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)]
                 vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
                             * (polar_angle_gridpoints / self.jet_angle)**power
-                radvel_gridpoints = - vel_gridpoints * np.sum(R_unit*n_unit, axis = 1) - Orbit_sec*v_prim*np.sin(w*t)
-
+                radvel_gridpoints = - vel_gridpoints\
+                                * np.sum(positions_vector_relto_jet_origin_unit * self.ray, axis = 1) - rv_secondary)
             elif self.jet_type == "x-wind":
                 rad_velocity = self.velocity_xwind(phase, positions_LOS, rv_secondary)
 
@@ -280,9 +280,14 @@ class Jet_model(object):
             radvel_gridpoints : array
                 The radial velocity for each grid point along the line-of-sight
             """
+            positions_vector_relto_jet_origin_unit = self.unit_vector(positions_LOS - self.jet_centre)
+            polar_angle_gridpoints = angle_between(positions_vector_relto_jet_origin_unit, self.direction, unit=True)
+            polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)] \
+                = np.pi - polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)]
             vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
                         * (polar_angle_gridpoints / self.jet_angle)**power
-            radvel_gridpoints = - vel_gridpoints * np.sum(R_unit*n_unit, axis = 1) - Orbit_sec*v_prim*np.sin(w*t)
+            radvel_gridpoints = - vel_gridpoints\
+                            * np.sum(positions_vector_relto_jet_origin_unit * self.ray, axis = 1) - rv_secondary)
 
 
             return radvel_gridpoints
