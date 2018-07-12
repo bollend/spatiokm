@@ -261,33 +261,33 @@ class Jet_model(object):
                 rad_velocity = self.velocity_disk_wind(phase, positions_LOS, rv_secondary)
             return rad_velocity
 
-        def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
-            """
-            Determines the velocity at each grid point along the line-of-sight
-            through the jet for the stellar jet model.
-
-            Parameters
-            ==========
-            phase : float
-                Orbital phase
-            positions_LOS : array
-                The positions of the gridpoints along the line-of-sight that go
-                through the jet.
-            rv_secondary : float
-                The radial velocity of the secondary component at that orbital phase
-            Returns
-            =======
-            radvel_gridpoints : array
-                The radial velocity for each grid point along the line-of-sight
-            """
-            positions_vector_relto_jet_origin_unit = self.unit_vector(positions_LOS - self.jet_centre)
-            polar_angle_gridpoints = angle_between(positions_vector_relto_jet_origin_unit, self.direction, unit=True)
-            polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)] \
-                = np.pi - polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)]
-            vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
-                        * (polar_angle_gridpoints / self.jet_angle)**power
-            radvel_gridpoints = - vel_gridpoints\
-                            * np.sum(positions_vector_relto_jet_origin_unit * self.ray, axis = 1) - rv_secondary)
-
-
-            return radvel_gridpoints
+        # def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
+        #     """
+        #     Determines the velocity at each grid point along the line-of-sight
+        #     through the jet for the stellar jet model.
+        #
+        #     Parameters
+        #     ==========
+        #     phase : float
+        #         Orbital phase
+        #     positions_LOS : array
+        #         The positions of the gridpoints along the line-of-sight that go
+        #         through the jet.
+        #     rv_secondary : float
+        #         The radial velocity of the secondary component at that orbital phase
+        #     Returns
+        #     =======
+        #     radvel_gridpoints : array
+        #         The radial velocity for each grid point along the line-of-sight
+        #     """
+        #     positions_vector_relto_jet_origin_unit = self.unit_vector(positions_LOS - self.jet_centre)
+        #     polar_angle_gridpoints = angle_between(positions_vector_relto_jet_origin_unit, self.direction, unit=True)
+        #     polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)] \
+        #         = np.pi - polar_angle_gridpoints[np.where(polar_angle_gridpoints > 0.5*np.pi)]
+        #     vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
+        #                 * (polar_angle_gridpoints / self.jet_angle)**power
+        #     radvel_gridpoints = - vel_gridpoints\
+        #                     * np.sum(positions_vector_relto_jet_origin_unit * self.ray, axis = 1) - rv_secondary)
+        #
+        #
+        #     return radvel_gridpoints
