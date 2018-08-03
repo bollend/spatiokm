@@ -392,9 +392,9 @@ class Jet_model(object):
         return radvel
 
 
-    def jet_density(self, jet_height, values, power=2, power_inner=2, power_outer=2):
+    def jet_density(self, jet_height, values, value_inner=0, power=2, power_inner=2, power_outer=2):
         """
-        Determines the velocity in the jet at each grid point along the line-of-sight
+        Determines the density in the jet at each grid point along the line-of-sight
 
         Parameters
         ==========
@@ -414,14 +414,19 @@ class Jet_model(object):
         density : array
             The density in the jet at each grid point along the line-of-sight
         """
+        density = np.zeros(number_of_gridpoints)
         if self.jet_type = "stellar jet":
-            density = values**power * jet_height**2
+            density = values**power * jet_height**-2
 
-        elif self.jet_type == "x-wind":
-            density =
+        elif self.jet_type == "x-wind" or self.jet_type == "disk wind":
+            density[np.abs(values) <= value_inner] =\
+                    (values[np.abs(theta) < alpha_in]/value_inner)**power_inner\
+                    * jet_height[(np.abs(theta) < alpha_in),2]**-2
+            density[np.abs(values) >= value_outer] =\
+                    (values[np.abs(theta) > alpha_in]/value_inner)**power_inner\
+                    * jet_height[(np.abs(theta) < alpha_in),2]**-2
 
-        elif self.jet_type == "disk wind":
-
+        return density
 
     # def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
     #     """
