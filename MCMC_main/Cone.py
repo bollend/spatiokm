@@ -378,8 +378,10 @@ class Jet_model(object):
         disk_launch_point          = positions - factor * self.gridpoints_unit_vector
         rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
         rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
-        azimuthal_velocity         = vel_keplerian\
+        azimuthal_vel_magnitude    = vel_keplerian\
                                      * (rad_distance_launch_point / rad_distance_positions)
+        azimuthal_velocity         = np.array([-1. * positions_relto_jet[:,1], \
+                                     positions_relto_jet[:,0], np.zeros(number_of_gridpoints)]).T
         return azimuthal_velocity
 
 
