@@ -72,7 +72,7 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
         ms = -1./3.*a2 + (S + T)
         return ms
 
-    def calc_launch_radius(mass_secondary, sma, ):
+    def calc_launch_radius_velocity(mass_secondary, sma):
         """
         Calculates the launch radius of the X-wind (at the X-region) with the
         secondary component (companion star) as origin.
@@ -89,10 +89,18 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
         -------
         launch_radius : float
             The launch radius of the X-region in units of the semi-major axis
+        keplerian_velocity : float
+            The Keplerian velocity at the radius of the X-region in the inner
+            disk
         '''
         """
         # Determine the radius of the main-sequence star, using the empirical
-        # mass-stellar radius relation of Demircan, 1991
-        radius_companion = 1.01*mass_secondary**0.724*0.00465\
-                            /parameters['asini']*np.sin(Incl)
-        vel_keplerian_launch_point
+        # mass-stellar radius relation of Demircan, 1991 in units of AU
+        radius_secondary_AU = 1.01 * mass_secondary**0.724 * 0.00465
+        radius_secondary_sma = radius_secondary_AU / sma
+        # The radius of the launch point at the X-region in the disk
+        launch_radius_AU = 2. * radius_secondary_AU
+        launch_radius_sma = 2. * radius_secondary_sma
+        keplerian_velocity= #(gravitational_constant*mass_secondary/radius_secondary_AU)
+
+        return launch_radius_sma, keplerian_velocity
