@@ -59,3 +59,40 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
             np.array(grid[:,1] * np.sin(inclination))] ).T
 
     return grid_primary
+
+    def calc_mass_sec(mp, inc):
+        a0 = -fm*mp**2/(np.sin(inc)**3)
+        a1 = -2*fm*mp/(np.sin(inc)**3)
+        a2 = -fm/(np.sin(inc)**3)
+        Q = (3.*a1 - a2**2)/9.
+        R = (9.*a2*a1 - 27*a0 - 2.*a2**3)/54.
+        D = Q**3 + R**2
+        S = (R + D**.5)**(1./3.)
+        T = (R - D**.5)**(1./3.)
+        ms = -1./3.*a2 + (S + T)
+        return ms
+
+    def calc_launch_radius(mass_secondary, sma, ):
+        """
+        Calculates the launch radius of the X-wind (at the X-region) with the
+        secondary component (companion star) as origin.
+
+        Parameters
+        ----------
+        mass_secondary : float
+            Stellar mass of the main sequence star (companion) in units of
+            solar mass
+        sma : float
+            Semi-major axis of the evovled star (primary component)
+
+        Returns
+        -------
+        launch_radius : float
+            The launch radius of the X-region in units of the semi-major axis
+        '''
+        """
+        # Determine the radius of the main-sequence star, using the empirical
+        # mass-stellar radius relation of Demircan, 1991
+        radius_companion = 1.01*mass_secondary**0.724*0.00465\
+                            /parameters['asini']*np.sin(Incl)
+        vel_keplerian_launch_point

@@ -62,8 +62,9 @@ class Jet_model(object):
     """
 
     def __init__(self, inclination, jet_angle, velocity_axis, velocity_edge,\
-                 jet_type, jet_centre=np.array([0, 0, 0]), jet_inner_angle=None,\
-                 velocity_inner=None, jet_orientation=np.array([0, 0, 1]), z_h=None):
+                 jet_type, mass_secondary, jet_centre=np.array([0, 0, 0]),\
+                 jet_inner_angle=None, velocity_inner=None,\
+                 jet_orientation=np.array([0, 0, 1]), z_h=None):
 
         self.inclination = inclination
         self.jet_angle = jet_angle
@@ -71,6 +72,7 @@ class Jet_model(object):
         self.velocity_axis = velocity_axis
         self.velocity_edge = velocity_edge
         self.jet_type = jet_type
+        self.mass_secondary = mass_secondary
         self.jet_centre = jet_centre
         if self.jet_type == 'disk_wind':
             self.jet_centre == jet_centre - z_h
@@ -373,15 +375,25 @@ class Jet_model(object):
         azimuthal velocity : array
             The azimuthal velocity for each grid point along the line-of-sight
         """
+        # Determines the coordinates of the grid point relative to
+        # the jet centre.
         positions_relto_jet        = positions - self.jet_centre
-        factor                     = positions[:,2] / self.gridpoints_unit_vector[2]
-        disk_launch_point          = positions - factor * self.gridpoints_unit_vector
-        rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
-        rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
-        azimuthal_vel_magnitude    = vel_keplerian\
-                                     * (rad_distance_launch_point / rad_distance_positions)
-        azimuthal_velocity         = np.array([-1. * positions_relto_jet[:,1], \
-                                     positions_relto_jet[:,0], np.zeros(number_of_gridpoints)]).T
+        # Differentiate between disk wind and X-wind (The launch point in the
+        # X-wind model is a source point)
+
+        if self.type=="disk wind":
+            factor                     = positions_relto_jet[:,2] / self.gridpoints_unit_vector[2]
+            disk_launch_point          = positions_relto_jet - factor * self.gridpoints_unit_vector
+            rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
+            rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
+            azimuthal_vel_magnitude    = vel_keplerian\
+                                        * (rad_distance_launch_point / rad_distance_positions)
+            azimuthal_velocity         = np.array([-1. * positions_relto_jet[:,1], \
+                                        positions_relto_jet[:,0], np.zeros(number_of_gridpoints)]).T
+
+        elif self.type=="stellar jet" or self.type=="x-wind":
+            launch_point = calc_launch_radius()
+
         return azimuthal_velocity
 
 
@@ -427,6 +439,12 @@ class Jet_model(object):
                     * jet_height[(np.abs(theta) < alpha_in),2]**-2
 
         return density
+
+
+
+
+
+
 
     # def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
     #     """
