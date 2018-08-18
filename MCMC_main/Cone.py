@@ -352,7 +352,8 @@ class Jet_model(object):
 
         return poloidal_velocity
 
-    def jet_azimuthal_velocity(self, positions, vel_keplerian, number_of_gridpoints):
+    def jet_azimuthal_velocity(self, positions, vel_keplerian, sma_primary,\
+                                number_of_gridpoints):
         """
         Determines the azimuthal velocity component at each grid point along the
         line-of-sight through the jet. The angular momentum along the
@@ -366,10 +367,11 @@ class Jet_model(object):
         vel_keplerian : array
             The Keplerian rotational velocity at the emerging point of the
             stream line corresponding to the grid points
+        sma_primary : float
+            The semi-major axis of the primary component (evolved star) in
+            units of AU
         number_of_gridpoints : integer
             The number of gridpoints
-        power : float (optional)
-            The velocity law power factor (default value = 2)
         Returns
         =======
         azimuthal velocity : array
@@ -378,22 +380,27 @@ class Jet_model(object):
         # Determines the coordinates of the grid point relative to
         # the jet centre.
         positions_relto_jet        = positions - self.jet_centre
+        factor                     = positions_relto_jet[:,2] / self.gridpoints_unit_vector[2]
+        disk_launch_point          = positions_relto_jet - factor * self.gridpoints_unit_vector
+        rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
+        rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
         # Differentiate between disk wind and X-wind (The launch point in the
         # X-wind model is a source point)
 
         if self.type=="disk wind":
-            factor                     = positions_relto_jet[:,2] / self.gridpoints_unit_vector[2]
-            disk_launch_point          = positions_relto_jet - factor * self.gridpoints_unit_vector
-            rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
-            rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
             azimuthal_vel_magnitude    = vel_keplerian\
                                         * (rad_distance_launch_point / rad_distance_positions)
             azimuthal_velocity         = np.array([-1. * positions_relto_jet[:,1], \
                                         positions_relto_jet[:,0], np.zeros(number_of_gridpoints)]).T
 
         elif self.type=="stellar jet" or self.type=="x-wind":
-            launch_point = calc_launch_radius()
-
+            radius_launch_point, kepl_vel_launch_point = calc_launch_radius(self.mass_sec, sma_primary)
+            # We add the radius of the X-region relative to the secondary component (companion star)
+            # to the radial distance of the positions in the jet relative to the jet axis
+            # in order to avoid infinite velocities
+            rad_distance_positions_corrected = radius_launch_point + rad_distance_positions
+            factor = radius_launch_point / rad_distance_positions
+            azimuthal_velocity = kepl_vel_launch_point * factor**.5
         return azimuthal_velocity
 
 

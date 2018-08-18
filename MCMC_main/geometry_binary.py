@@ -101,6 +101,7 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
         # The radius of the launch point at the X-region in the disk
         launch_radius_AU = 2. * radius_secondary_AU
         launch_radius_sma = 2. * radius_secondary_sma
-        keplerian_velocity= #(gravitational_constant*mass_secondary/radius_secondary_AU)
+        keplerian_velocity= 30.* (mass_secondary / launch_radius_AU)**.5
+        #(gravitational_constant*mass_secondary/radius_secondary_AU)
 
         return launch_radius_sma, keplerian_velocity
