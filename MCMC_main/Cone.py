@@ -52,7 +52,7 @@ class Jet_model(object):
     Raises
     ======
 
-    ???TypeError
+    TypeError
         When 'jet_centre' is not a numpy array.
 
     Examples
@@ -78,7 +78,6 @@ class Jet_model(object):
             self.jet_centre == jet_centre - z_h
         # else:
         #     self.jet_source_point == self.jet_source_point
-        self.jet_inner_angle = jet_inner_angle
         self.velocity_inner = velocity_inner
         self.jet_orientation = jet_orientation
         self.ray = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
@@ -118,13 +117,13 @@ class Jet_model(object):
         """
         return vector / np.linalg.norm(vector)
 
-    def angle_between(self, v1, v2, unit=False):
+    def angle_between_vectors(self, v1, v2, unit=False):
         """
         Returns the angle in radians between vectors 'v1' and 'v2'
         """
         if unit==False:
-            v1_u = unit_vector(v1)
-            v2_u = unit_vector(v2)
+            v1_u = self.unit_vector(v1)
+            v2_u = self.unit_vector(v2)
         else:
             v1_u = v1
             v2_u = v2
@@ -241,7 +240,7 @@ class Jet_model(object):
         Sets the polar angle of the gridpoints in the jet relative to the
         jet axis.
         """
-        self.polar_angle_gridpoints = self.angle_between(self.gridpoints_unit_vector,\
+        self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
                                       self.jet_orientation, unit=True)
         self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
                 = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
@@ -352,7 +351,7 @@ class Jet_model(object):
 
         return poloidal_velocity
 
-    def jet_azimuthal_velocity(self, positions, vel_keplerian, sma_primary,\
+    def jet_azimuthal_velocity(self, positions_LOS, vel_keplerian, sma_primary,\
                                 number_of_gridpoints):
         """
         Determines the azimuthal velocity component at each grid point along the
@@ -361,7 +360,7 @@ class Jet_model(object):
 
         Parameters
         ==========
-        positions : array
+        positions_LOS : array
             The positions of the gridpoints along the line-of-sight that go
             through the jet.
         vel_keplerian : array
@@ -379,11 +378,11 @@ class Jet_model(object):
         """
         # Determines the coordinates of the grid point relative to
         # the jet centre.
-        positions_relto_jet        = positions - self.jet_centre
+        positions_relto_jet        = positions_LOS - self.jet_centre
         factor                     = positions_relto_jet[:,2] / self.gridpoints_unit_vector[2]
         disk_launch_point          = positions_relto_jet - factor * self.gridpoints_unit_vector
         rad_distance_launch_point  = (disk_launch_point[:,0]**2 + disk_launch_point[:,1]**2)**.5
-        rad_distance_positions     = (positions[:,0]**2 + positions[:,1]**2)**.5
+        rad_distance_positions     = (positions_LOS[:,0]**2 + positions_LOS[:,1]**2)**.5
         # Differentiate between disk wind and X-wind (The launch point in the
         # X-wind model is a source point)
 
@@ -417,7 +416,8 @@ class Jet_model(object):
         return radvel
 
 
-    def jet_density(self, jet_height, values, value_inner=0, power=2, power_inner=2, power_outer=2):
+    def jet_density(self, jet_height, values, value_inner=0, power=2, \
+                    power_inner=2, power_outer=2):
         """
         Determines the density in the jet at each grid point along the line-of-sight
 
@@ -448,44 +448,7 @@ class Jet_model(object):
                     (values[np.abs(theta) < alpha_in]/value_inner)**power_inner\
                     * jet_height[(np.abs(theta) < alpha_in),2]**-2
             density[np.abs(values) >= value_outer] =\
-                    (values[np.abs(theta) > alpha_in]/value_inner)**power_inner\
+                    (values[np.abs(theta) > alpha_in]/value_inner)**power_outer\
                     * jet_height[(np.abs(theta) < alpha_in),2]**-2
 
         return density
-
-
-
-
-
-
-
-    # def velocity_stellar_jet(self, phase, position_LOS, rv_secondary):
-    #     """
-    #     Determines the velocity at each grid point along the line-of-sight
-    #     through the jet for the stellar jet model.
-    #
-    #     Parameters
-    #     ==========
-    #     phase : float
-    #         Orbital phase
-    #     positions_LOS : array
-    #         The positions of the gridpoints along the line-of-sight that go
-    #         through the jet.
-    #     rv_secondary : float
-    #         The radial velocity of the secondary component at that orbital phase
-    #     Returns
-    #     =======
-    #     radvel_gridpoints : array
-    #         The radial velocity for each grid point along the line-of-sight
-    #     """
-    #     positions_vector_relto_jet_origin_unit = self.unit_vector(positions_LOS - self.jet_centre)
-    #     self.polar_angle_gridpoints = angle_between(positions_vector_relto_jet_origin_unit, self.direction, unit=True)
-    #     self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5*np.pi)] \
-    #         = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5*np.pi)]
-    #     vel_gridpoints = self.velocity_axis + (self.velocity_edge - self.velocity_axis)\
-    #                 * (self.polar_angle_gridpoints / self.jet_angle)**power
-    #     radvel_gridpoints = - vel_gridpoints\
-    #                     * np.sum(positions_vector_relto_jet_origin_unit * self.ray, axis = 1) - rv_secondary)
-    #
-    #
-    #     return radvel_gridpoints

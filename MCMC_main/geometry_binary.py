@@ -83,7 +83,7 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
             Stellar mass of the main sequence star (companion) in units of
             solar mass
         sma : float
-            Semi-major axis of the evovled star (primary component)
+            Semi-major axis of the evolved star (primary component)
 
         Returns
         -------
