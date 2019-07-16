@@ -391,7 +391,7 @@ class Jet_model(object):
             The density in the jet at each grid point along the line-of-sight
         """
         density = np.zeros(number_of_gridpoints)
-        if self.jet_type = "simple stellar jet" or self.jet_type = "stellar jet":
+        if self.jet_type == "simple stellar jet" or self.jet_type == "stellar jet":
             density[np.where(angles > self.jet_cavity_angle)] = \
                     (angles[np.where(angles > self.jet_cavity_angle)]/self.jet_angle)**power * jet_height**-2
 
@@ -485,9 +485,15 @@ class Stellar_jet_simple(Jet):
 
 
 
-        def density(self):
-                """
-                """
+    def density(self):
+            """
+
+            """
+            density = np.zeros(number_of_gridpoints)
+            density[np.where(angles > self.jet_cavity_angle)] = \
+                        (angles[np.where(angles > self.jet_cavity_angle)]/self.jet_angle)**power * jet_height**-2
+
+            return density
 
 class Stellar_jet(Jet):
     """
