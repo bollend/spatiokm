@@ -56,7 +56,7 @@ class Jet_model(object):
 
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
+    def __init__(self, inclination, jet_angle, jet_type, jet_centre=np.array([0, 0, 0]),\
                 jet_orientation=np.array([0, 0, 1])):
 
         self.inclination     = inclination
@@ -64,6 +64,7 @@ class Jet_model(object):
         self.jet_centre      = jet_centre
         self.jet_orientation = jet_orientation
         self.ray             = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
+        self.jet_type        = jet_type
 
         if self.jet_type == 'disk_wind':
             self.jet_centre == jet_centre - z_h
@@ -417,14 +418,17 @@ class Jet(Jet_model):
     Attributes
     ==========
     """
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge):
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None):
         self.jet_cavity_angle = jet_cavity_angle
         self.velocity_max     = velocity_max
         self.velocity_edge    = velocity_edge
-        Jet_model.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray)
+        # Jet_model.__init__(self, inclination, jet_angle, ray, jet_centre=np.array([0, 0, 0]),\
+        #             jet_orientation=np.array([0, 0, 1]))
+        super().__init__(inclination, jet_angle, jet_type, jet_centre,\
+                        jet_orientation)
 
     def _set_gridpoints_unit_vector(self, position):
         """
@@ -454,14 +458,19 @@ class Jet(Jet_model):
 class Stellar_jet_simple(Jet):
     """
     """
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type):
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None):
 
-        self.jet_type="simple stellar jet"
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        # self.jet_type="simple stellar jet"
+        # Jet.__init__(self, inclination, jet_angle, ray, velocity_max,\
+        #             velocity_edge, jet_centre=np.array([0, 0, 0]),\
+        #             jet_orientation=np.array([0, 0, 1]), \
+        #             jet_cavity_angle=None)
+        super().__init__(inclination, jet_angle, ray, velocity_max,\
+                    velocity_edge, jet_type, jet_centre, jet_orientation, jet_cavity_angle)
+        self.jet_type = "simple stellar jet"
 
 
     def poloidal_velocity(self, number_of_gridpoints, power):
@@ -499,13 +508,15 @@ class Stellar_jet(Jet):
     """
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type):
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None):
 
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        Jet.__init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                    jet_centre=np.array([0, 0, 0]),\
+                    jet_orientation=np.array([0, 0, 1]), \
+                    jet_cavity_angle=None)
     def poloidal_velocity(self):
         """
         """
@@ -528,14 +539,16 @@ class X_wind(Jet):
     """
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type,\
+    def __init__(self, inclination, jet_angle, ray, velocity_max, \
+                velocity_edge, jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None,\
                 velocity_inner=None, jet_inner_angle=None, z_h=None):
 
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        Jet.__init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                    jet_centre=np.array([0, 0, 0]),\
+                    jet_orientation=np.array([0, 0, 1]), \
+                    jet_cavity_angle=None)
     def poloidal_velocity(self):
         """
         """
@@ -556,14 +569,16 @@ class X_wind_strict(Jet):
     """
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type,\
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None,\
                 velocity_inner=None, jet_inner_angle=None, z_h=None):
 
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        Jet.__init__(self, inclination, jet_angle, ray, velocity_max,\
+                    velocity_edge, jet_centre=np.array([0, 0, 0]),\
+                    jet_orientation=np.array([0, 0, 1]), \
+                    jet_cavity_angle=None)
     def poloidal_velocity(self):
         """
         """
@@ -584,16 +599,18 @@ class Disk_wind(Jet):
     """
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type,\
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None,\
                 velocity_inner=None, jet_inner_angle=None, z_h=None):
 
         if self.jet_type == 'disk_wind':
             self.jet_centre == jet_centre - z_h
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        Jet.__init__(self, inclination, jet_angle, ray, velocity_max,\
+                    velocity_edge, jet_centre=np.array([0, 0, 0]),\
+                    jet_orientation=np.array([0, 0, 1]), \
+                    jet_cavity_angle=None)
     def poloidal_velocity(self):
         """
         """
@@ -614,16 +631,18 @@ class Disk_wind_strict(Jet):
     """
     """
 
-    def __init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1]), ray, \
-                jet_cavity_angle=None, velocity_max, velocity_edge, jet_type,\
+    def __init__(self, inclination, jet_angle, ray, velocity_max, velocity_edge,\
+                jet_type, jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]), \
+                jet_cavity_angle=None,\
                 velocity_inner=None, jet_inner_angle=None, z_h=None):
 
         if self.jet_type == 'disk_wind':
             self.jet_centre == jet_centre - z_h
-        Jet.__init__(self, inclination, jet_angle, jet_centre=np.array([0, 0, 0]),\
-                    jet_orientation=np.array([0, 0, 1]), ray, \
-                    jet_cavity_angle=None, velocity_max, velocity_edge)
+        Jet.__init__(self, inclination, jet_angle, ray, velocity_max, \
+                    velocity_edge, jet_centre=np.array([0, 0, 0]),\
+                    jet_orientation=np.array([0, 0, 1]), \
+                    jet_cavity_angle=None)
     def poloidal_velocity(self):
         """
         """

@@ -1,4 +1,5 @@
 import numpy as np
+from PyAstronomy import pyasl
 
 def T0_to_IC(omega, ecc, P, T0):
     '''
@@ -54,54 +55,117 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
     '''
     grid = disk_grid_fibonacci.disk_grid_fibonacci(number_of_gridpoints,\
             radius_primary, [0,0])
+
     grid_primary = np.array( [np.array(-grid[:,0]),\
             np.array(-grid[:,1] * np.cos(inclination)), \
             np.array(grid[:,1] * np.sin(inclination))] ).T
 
     return grid_primary
 
-    def calc_mass_sec(mp, inc):
-        a0 = -fm*mp**2/(np.sin(inc)**3)
-        a1 = -2*fm*mp/(np.sin(inc)**3)
-        a2 = -fm/(np.sin(inc)**3)
-        Q = (3.*a1 - a2**2)/9.
-        R = (9.*a2*a1 - 27*a0 - 2.*a2**3)/54.
-        D = Q**3 + R**2
-        S = (R + D**.5)**(1./3.)
-        T = (R - D**.5)**(1./3.)
-        ms = -1./3.*a2 + (S + T)
-        return ms
+def calc_mass_sec(mp, inc, fm):
+    '''
+    Calculate the mass of the secondary component, given the mass of
+    the primay, inclination, and mass function of the system
 
-    def calc_launch_radius_velocity(mass_secondary, sma):
-        """
-        Calculates the launch radius of the X-wind (at the X-region) with the
-        secondary component (companion star) as origin.
+    Parameters
+    ----------
+    mp : float
+        Mass of the primary in units of AU
+    inc : float
+        inclination of the system in units of radians
+    fm : float
+        mass function in units of AU
 
-        Parameters
-        ----------
-        mass_secondary : float
-            Stellar mass of the main sequence star (companion) in units of
-            solar mass
-        sma : float
-            Semi-major axis of the evolved star (primary component)
+    Returns
+    -------
+    ms : float
+        Mass of the secondary in units of AU
+    '''
+    a0 = -fm*mp**2/(np.sin(inc)**3)
+    a1 = -2*fm*mp/(np.sin(inc)**3)
+    a2 = -fm/(np.sin(inc)**3)
+    Q  = (3.*a1 - a2**2)/9.
+    R  = (9.*a2*a1 - 27*a0 - 2.*a2**3)/54.
+    D  = Q**3 + R**2
+    S  = (R + D**.5)**(1./3.)
+    T  = (R - D**.5)**(1./3.)
+    ms = -1./3.*a2 + (S + T)
+    return ms
 
-        Returns
-        -------
-        launch_radius : float
-            The launch radius of the X-region in units of the semi-major axis
-        keplerian_velocity : float
-            The Keplerian velocity at the radius of the X-region in the inner
-            disk
-        '''
-        """
-        # Determine the radius of the main-sequence star, using the empirical
-        # mass-stellar radius relation of Demircan, 1991 in units of AU
-        radius_secondary_AU = 1.01 * mass_secondary**0.724 * 0.00465
-        radius_secondary_sma = radius_secondary_AU / sma
-        # The radius of the launch point at the X-region in the disk
-        launch_radius_AU = 2. * radius_secondary_AU
-        launch_radius_sma = 2. * radius_secondary_sma
-        keplerian_velocity= 30.* (mass_secondary / launch_radius_AU)**.5
-        #(gravitational_constant*mass_secondary/radius_secondary_AU)
+def pos_vel_primary_secondary(phasenumber, inclination, n_unit, period, omega, ecc, mass_prim,\
+                               mass_sec, sma_prim, radius_prim, T_inf, T0, K1,\
+                               gridpoints_primary):
+    '''
+    Calculates the location and radial velocity of the primary and secondary components
+    (in AU and km/s respectively)
+    '''
+    AU          = 1.496e+11 # 1AU in m
+    t           = 0.01 * key * period
+    sma_sec     = sma_prim * mass_prim / mass_sec # semi-major axis of secondary
+    point_prim  = disk_grid(radius_prim, inclination, gridpoints_primary)    # points on the primary component (assumed to be a uniform disk)
+    # n_unit = normal vector along the line of sight
 
-        return launch_radius_sma, keplerian_velocity
+    ###### Orbital solution
+    # ke       = pyasl.KeplerEllipse(sma_prim, period, e = ecc, Omega=0.,
+    #                             i = 0.0, w = omega)
+    # pos_prim = -ke.xyzPos((t + (T_inf - T0))%period)
+    # ke_sec   = pyasl.KeplerEllipse(sma_sec, period, e=ecc, Omega=0., i = 0.0,
+    #                             w = omega + 180)
+    # pos_sec  = -ke_sec.xyzPos((t + (T_inf - T0))%period)
+    # ### RV of phostospheric spectra
+    # ke_syn          = pyasl.KeplerEllipse(sma_prim, period, e=ecc, Omega=0.,\
+    #                             i = inclination*180./np.pi, w = omega)
+    # phaseplot_syn   = np.arange(0., 1.001*period, 0.01*period)
+    # vel_value_syn   = ke_syn.xyzVel((t + (T_inf - T0))%period)
+    # rvprim_syn      = K1*vel_value_syn[2]
+
+    ke              = pyasl.KeplerEllipse(sma_prim, period, e = parameters['ecc'], Omega=0.,
+                                i = 0.0, w = omega)
+    pos_prim        = -ke.xyzPos((t + (T_inf - T0))%period)
+    ke_sec          = pyasl.KeplerEllipse(sma_sec, period, e=parameters['ecc'], Omega=0., i = 0.0,
+                                w = omega + 180)
+    pos_sec         = -ke_sec.xyzPos((t + (T_inf - T0))%period)
+    ### RV of phostospheric spectra
+    ke_syn          = pyasl.KeplerEllipse(sma_prim, period, e=parameters['ecc'], Omega=0., i = 90, w = omega)
+    phaseplot_syn   = np.arange(0., 1.001*period, 0.01*period)
+    vel_syn         = ke_syn.xyzVel((phaseplot_syn + (T_inf - T0))% period)
+    velplot_min_syn = (np.max(vel_syn[::,2])*0.5 - np.min(vel_syn[::,2])*0.5)
+    vel_syn[::,2]   = vel_syn[::,2]/velplot_min_syn
+    vel_value_syn   = ke_syn.xyzVel((t + (T_inf - T0))%period)/velplot_min_syn
+    rvprim_syn      = K1*vel_value_syn[2]
+
+    return pos_prim, pos_sec, rv_prim_syn, rv_sec
+
+def calc_launch_radius_velocity(mass_secondary, sma):
+    """
+    Calculates the launch radius of the X-wind (at the X-region) with the
+    secondary component (companion star) as origin.
+
+    Parameters
+    ----------
+    mass_secondary : float
+        Stellar mass of the main sequence star (companion) in units of
+        solar mass
+    sma : float
+        Semi-major axis of the evolved star (primary component)
+
+    Returns
+    -------
+    launch_radius : float
+        The launch radius of the X-region in units of the semi-major axis
+    keplerian_velocity : float
+        The Keplerian velocity at the radius of the X-region in the inner
+        disk
+    '''
+    """
+    # Determine the radius of the main-sequence star, using the empirical
+    # mass-stellar radius relation of Demircan, 1991 in units of AU
+    radius_secondary_AU  = 1.01 * mass_secondary**0.724 * 0.00465
+    radius_secondary_sma = radius_secondary_AU / sma
+    # The radius of the launch point at the X-region in the disk
+    launch_radius_AU     = 2. * radius_secondary_AU
+    launch_radius_sma    = 2. * radius_secondary_sma
+    keplerian_velocity   = 30.* (mass_secondary / launch_radius_AU)**.5
+    #(gravitational_constant*mass_secondary/radius_secondary_AU)
+
+    return launch_radius_sma, keplerian_velocity
