@@ -54,11 +54,11 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
         evolved component in an array with dimensions (Npoints, 3)
     '''
     grid = disk_grid_fibonacci.disk_grid_fibonacci(number_of_gridpoints,\
-            radius_primary, [0,0])
+           radius_primary, [0,0])
 
     grid_primary = np.array( [np.array(-grid[:,0]),\
-            np.array(-grid[:,1] * np.cos(inclination)), \
-            np.array(grid[:,1] * np.sin(inclination))] ).T
+                   np.array(-grid[:,1] * np.cos(inclination)), \
+                   np.array(grid[:,1] * np.sin(inclination))] ).T
 
     return grid_primary
 
