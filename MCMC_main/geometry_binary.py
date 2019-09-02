@@ -93,48 +93,37 @@ def calc_mass_sec(mp, inc, fm):
     return ms
 
 def pos_vel_primary_secondary(phasenumber, inclination, n_unit, period, omega, ecc, mass_prim,\
-                               mass_sec, sma_prim, radius_prim, T_inf, T0, K1,\
+                               mass_sec, sma_prim, radius_prim, T_inf, T0, rad_vel_prim,\
                                gridpoints_primary):
     '''
     Calculates the location and radial velocity of the primary and secondary components
     (in AU and km/s respectively)
     '''
-    AU          = 1.496e+11 # 1AU in m
-    t           = 0.01 * key * period
-    sma_sec     = sma_prim * mass_prim / mass_sec # semi-major axis of secondary
-    point_prim  = disk_grid(radius_prim, inclination, gridpoints_primary)    # points on the primary component (assumed to be a uniform disk)
-    # n_unit = normal vector along the line of sight
+    AU              = 1.496e+11     # 1AU in m
+    AU_to_km        = 1.496e+08     # 1AU in km
+    days_to_sec     = 24*60*60      # 1day in seconds
 
-    ###### Orbital solution
-    # ke       = pyasl.KeplerEllipse(sma_prim, period, e = ecc, Omega=0.,
-    #                             i = 0.0, w = omega)
-    # pos_prim = -ke.xyzPos((t + (T_inf - T0))%period)
-    # ke_sec   = pyasl.KeplerEllipse(sma_sec, period, e=ecc, Omega=0., i = 0.0,
-    #                             w = omega + 180)
-    # pos_sec  = -ke_sec.xyzPos((t + (T_inf - T0))%period)
-    # ### RV of phostospheric spectra
-    # ke_syn          = pyasl.KeplerEllipse(sma_prim, period, e=ecc, Omega=0.,\
-    #                             i = inclination*180./np.pi, w = omega)
-    # phaseplot_syn   = np.arange(0., 1.001*period, 0.01*period)
-    # vel_value_syn   = ke_syn.xyzVel((t + (T_inf - T0))%period)
-    # rvprim_syn      = K1*vel_value_syn[2]
+    rad_vel_sec     = rad_vel_prim*mass_prim/mass_sec     # radial velocity of the secondary (km/s)
+    max_vel_prim    = rad_vel_prim/np.sin(inclination)
+    max_vel_sec     = rad_vel_sec/np.sin(inclination)
+    t               = phasenumber * 0.01 * period
+    sma_sec         = sma_prim * mass_prim / mass_sec
+    orbit_primary   = pyasl.KeplerEllipse(sma_prim, period, e=ecc, Omega=0.,
+                    i=0., w=omega)
+    orbit_secondary = pyasl.KeplerEllipse(sma_sec, period, e=ecc, Omega=0.,
+                    i=0., w=omega+180)
 
-    ke              = pyasl.KeplerEllipse(sma_prim, period, e = parameters['ecc'], Omega=0.,
-                                i = 0.0, w = omega)
-    pos_prim        = -ke.xyzPos((t + (T_inf - T0))%period)
-    ke_sec          = pyasl.KeplerEllipse(sma_sec, period, e=parameters['ecc'], Omega=0., i = 0.0,
-                                w = omega + 180)
-    pos_sec         = -ke_sec.xyzPos((t + (T_inf - T0))%period)
-    ### RV of phostospheric spectra
-    ke_syn          = pyasl.KeplerEllipse(sma_prim, period, e=parameters['ecc'], Omega=0., i = 90, w = omega)
-    phaseplot_syn   = np.arange(0., 1.001*period, 0.01*period)
-    vel_syn         = ke_syn.xyzVel((phaseplot_syn + (T_inf - T0))% period)
-    velplot_min_syn = (np.max(vel_syn[::,2])*0.5 - np.min(vel_syn[::,2])*0.5)
-    vel_syn[::,2]   = vel_syn[::,2]/velplot_min_syn
-    vel_value_syn   = ke_syn.xyzVel((t + (T_inf - T0))%period)/velplot_min_syn
-    rvprim_syn      = K1*vel_value_syn[2]
+    position_primary_AU           = -orbit_primary.xyzPos((t + (T_inf - T0))%period)
+    position_secondary_AU         = -orbit_secondary.xyzPos((t + (T_inf - T0))%period)
 
-    return pos_prim, pos_sec, rv_prim_syn, rv_sec
+    velocity_primary_AU_per_day   = -orbit_primary.xyzVel((t + (T_inf - T0))%period)
+    velocity_secondary_AU_per_day = -orbit_secondary..xyzVel((t + (T_inf - T0))%period)
+
+    velocity_primary_km_per_sec   = velocity_primary_AU_per_day * AU_to_km / days_to_sec
+    velocity_secondary_km_per_sec = velocity_secondary_AU_per_day * AU_to_km / days_to_sec
+
+    return position_primary_AU, position_secondary_AU, velocity_primary_km_per_sec, velocity_secondary_km_per_sec
+    
 
 def calc_launch_radius_velocity(mass_secondary, sma):
     """
