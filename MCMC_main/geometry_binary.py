@@ -92,22 +92,32 @@ def calc_mass_sec(mp, inc, fm):
     ms = -1./3.*a2 + (S + T)
     return ms
 
-def pos_vel_primary_secondary(phasenumber, inclination, n_unit, period, omega, ecc, mass_prim,\
-                               mass_sec, sma_prim, radius_prim, T_inf, T0, rad_vel_prim,\
-                               gridpoints_primary):
+def pos_vel_primary_secondary(phasenumber, period, omega,
+                              ecc, sma_prim,
+                              sma_sec, T_inf, T0):
     '''
-    Calculates the location and radial velocity of the primary and secondary components
-    (in AU and km/s respectively)
-    '''
-    AU              = 1.496e+11     # 1AU in m
-    AU_to_km        = 1.496e+08     # 1AU in km
-    days_to_sec     = 24*60*60      # 1day in seconds
+    Calculates the orbital position and velocity of the primary and secondary
+    components (in AU and km/s respectively).
 
-    rad_vel_sec     = rad_vel_prim*mass_prim/mass_sec     # radial velocity of the secondary (km/s)
-    max_vel_prim    = rad_vel_prim/np.sin(inclination)
-    max_vel_sec     = rad_vel_sec/np.sin(inclination)
+    Returns
+    -------
+    position_primary_AU : np.array
+        The (x,y,z) position of the primary star in AU, relative to the centre
+        of mass.
+    position_secondary_AU : np.array
+        The (x,y,z) position of the secondary star in AU, relative to the centre
+        of mass.
+    velocity_primary_km_per_sec : np.array
+        (v_x, v_y, v_z) of the primary star in km/s at each point (x,y,z).
+    velocity_secondary_km_per_sec : np.array
+        (v_x,v_y,v_z) of the secondary star in km/s at each point (x,y,z).
+
+    '''
+    AU_to_km        = 1.496e+08     # 1AU in km
+    days_to_sec     = 24*60*60      # days to seconds
+
     t               = phasenumber * 0.01 * period
-    sma_sec         = sma_prim * mass_prim / mass_sec
+
     orbit_primary   = pyasl.KeplerEllipse(sma_prim, period, e=ecc, Omega=0.,
                     i=0., w=omega)
     orbit_secondary = pyasl.KeplerEllipse(sma_sec, period, e=ecc, Omega=0.,
@@ -117,13 +127,13 @@ def pos_vel_primary_secondary(phasenumber, inclination, n_unit, period, omega, e
     position_secondary_AU         = -orbit_secondary.xyzPos((t + (T_inf - T0))%period)
 
     velocity_primary_AU_per_day   = -orbit_primary.xyzVel((t + (T_inf - T0))%period)
-    velocity_secondary_AU_per_day = -orbit_secondary..xyzVel((t + (T_inf - T0))%period)
+    velocity_secondary_AU_per_day = -orbit_secondary.xyzVel((t + (T_inf - T0))%period)
 
     velocity_primary_km_per_sec   = velocity_primary_AU_per_day * AU_to_km / days_to_sec
     velocity_secondary_km_per_sec = velocity_secondary_AU_per_day * AU_to_km / days_to_sec
 
     return position_primary_AU, position_secondary_AU, velocity_primary_km_per_sec, velocity_secondary_km_per_sec
-    
+
 
 def calc_launch_radius_velocity(mass_secondary, sma):
     """
