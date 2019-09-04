@@ -105,7 +105,9 @@ class Jet_model(object):
         """
         Returns the unit vector of the vector.
         """
-        return vector / np.linalg.norm(vector)
+        vector_norm = np.linalg.norm(vector, axis=1)
+        vector_norm_T = np.array([vector_norm]).T
+        return vector / vector_norm_T
 
     def angle_between_vectors(self, v1, v2, unit=False):
         """
@@ -425,7 +427,7 @@ class Jet(Jet_model):
                 velocity_edge,
                 jet_type, jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None):
+                jet_cavity_angle=0):
         self.jet_cavity_angle = jet_cavity_angle
         self.velocity_max     = velocity_max
         self.velocity_edge    = velocity_edge
@@ -469,7 +471,7 @@ class Stellar_jet_simple(Jet):
                 velocity_edge, jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None):
+                jet_cavity_angle=0):
 
         super().__init__(inclination, jet_angle,
                         velocity_max,
@@ -492,7 +494,7 @@ class Stellar_jet_simple(Jet):
             # The jet has a single velocity law
             # The velocity for the gridpoints in the jet which have a polar angle
             # smaller than the cavity angle is not calculated
-            vel_gridpoints[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)] \
+            poloidal_velocity[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)] \
                     = self.velocity_max + (self.velocity_edge - self.velocity_max)\
                     * ( (self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)] - self.jet_cavity_angle)\
                     / (self.jet_angle - self.jet_cavity_angle) )**power
@@ -501,14 +503,16 @@ class Stellar_jet_simple(Jet):
 
 
 
-    def density(self):
+    def density(self, number_of_gridpoints, power):
             """
-
+            The density in the jet for each gridpoint. The density is a function
+            of the polar angle and the height of the jet.
             """
+        
             density = np.zeros(number_of_gridpoints)
-            density[np.where(angles > self.jet_cavity_angle)] = \
-                        (angles[np.where(angles > self.jet_cavity_angle)]\
-                        /self.jet_angle)**power \
+            density[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)] = \
+                        (self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)]\
+                        / self.jet_angle)**power \
                         * self.gridpoints[:,2]**-2
 
             return density
@@ -522,13 +526,13 @@ class Stellar_jet(Jet):
                 velocity_edge, jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None):
+                jet_cavity_angle=0):
 
         Jet.__init__(self, inclination, jet_angle,
                     velocity_max, velocity_edge,
                     jet_centre=np.array([0, 0, 0]),
                     jet_orientation=np.array([0, 0, 1]),
-                    jet_cavity_angle=None)
+                    jet_cavity_angle=0)
     def poloidal_velocity(self):
         """
         """
@@ -556,14 +560,14 @@ class X_wind(Jet):
                 velocity_edge, jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None,
+                jet_cavity_angle=0,
                 velocity_inner=None, jet_inner_angle=None, z_h=None):
 
         Jet.__init__(self, inclination, jet_angle,
                     velocity_max, velocity_edge,
                     jet_centre=np.array([0, 0, 0]),
                     jet_orientation=np.array([0, 0, 1]),
-                    jet_cavity_angle=None)
+                    jet_cavity_angle=0)
 
     def poloidal_velocity(self):
         """
@@ -589,7 +593,7 @@ class X_wind_strict(Jet):
                 velocity_max, velocity_edge,
                 jet_type, jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None,
+                jet_cavity_angle=0,
                 velocity_inner=None,
                 jet_inner_angle=None, z_h=None):
 
@@ -597,7 +601,7 @@ class X_wind_strict(Jet):
                     velocity_max, velocity_edge,
                     jet_centre=np.array([0, 0, 0]),
                     jet_orientation=np.array([0, 0, 1]),
-                    jet_cavity_angle=None)
+                    jet_cavity_angle=0)
 
     def poloidal_velocity(self):
         """
@@ -624,7 +628,7 @@ class Disk_wind(Jet):
                 velocity_edge, jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None,
+                jet_cavity_angle=0,
                 velocity_inner=None,
                 jet_inner_angle=None, z_h=None):
 
@@ -635,7 +639,7 @@ class Disk_wind(Jet):
                     velocity_edge,
                     jet_centre=np.array([0, 0, 0]),
                     jet_orientation=np.array([0, 0, 1]),
-                    jet_cavity_angle=None)
+                    jet_cavity_angle=0)
 
     def poloidal_velocity(self):
         """
@@ -662,7 +666,7 @@ class Disk_wind_strict(Jet):
                 velocity_edge,jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_cavity_angle=None,
+                jet_cavity_angle=0,
                 velocity_inner=None,
                 jet_inner_angle=None,
                 z_h=None):
@@ -674,7 +678,7 @@ class Disk_wind_strict(Jet):
                     velocity_edge,
                     jet_centre=np.array([0, 0, 0]),
                     jet_orientation=np.array([0, 0, 1]),
-                    jet_cavity_angle=None)
+                    jet_cavity_angle=0)
 
     def poloidal_velocity(self):
         """
