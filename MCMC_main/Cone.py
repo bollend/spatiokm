@@ -463,6 +463,19 @@ class Jet(Jet_model):
                  - radvel_secondary
         return radvel
 
+    def radial_velocity_gradient(self, radial_velocity, dS,
+                                km_to_m=False, AU_to_m=False):
+        if km_to_m==True:
+            radial_velocity *= 0.001
+        if AU_to_m==True:
+            dS *= 1.496e11
+        radvel_gradient  = np.zeros(len(radial_velocity))
+        v_gradient[1:-1] = np.abs((radial_velocity[2:] - radial_velocity[point,0:-2]) / (2*dS))
+        v_gradient[0]    = np.abs((radial_velocity[1] - radial_velocity[ 0]) / dS)
+        v_gradient[-1]   = np.abs((radial_velocity[-1] - radial_velocity[ -2]) / dS)
+
+        return radvel_gradient
+
 class Stellar_jet_simple(Jet):
     """
     """
@@ -508,7 +521,7 @@ class Stellar_jet_simple(Jet):
             The density in the jet for each gridpoint. The density is a function
             of the polar angle and the height of the jet.
             """
-        
+
             density = np.zeros(number_of_gridpoints)
             density[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)] = \
                         (self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)]\
