@@ -470,9 +470,9 @@ class Jet(Jet_model):
         if AU_to_m==True:
             dS *= 1.496e11
         radvel_gradient  = np.zeros(len(radial_velocity))
-        v_gradient[1:-1] = np.abs((radial_velocity[2:] - radial_velocity[point,0:-2]) / (2*dS))
-        v_gradient[0]    = np.abs((radial_velocity[1] - radial_velocity[ 0]) / dS)
-        v_gradient[-1]   = np.abs((radial_velocity[-1] - radial_velocity[ -2]) / dS)
+        radvel_gradient[1:-1] = np.abs((radial_velocity[2:] - radial_velocity[0:-2]) / (2*dS))
+        radvel_gradient[0]    = np.abs((radial_velocity[1] - radial_velocity[ 0]) / dS)
+        radvel_gradient[-1]   = np.abs((radial_velocity[-1] - radial_velocity[ -2]) / dS)
 
         return radvel_gradient
 
