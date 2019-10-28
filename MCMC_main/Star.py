@@ -2,7 +2,6 @@
 A star object
 """
 
-import numpy as np
 import geometry_binary
 
 class Star(object):
@@ -14,8 +13,13 @@ class Star(object):
         self.centre = centre
         self.inclination = inclination
         self.gridpoints = gridpoints
+        self.grid = None
+        self.grid_location = None
 
     def get_radius(self):
+        """
+        returns the radius of the Star object
+        """
         return self.radius
 
     def _set_grid(self):
