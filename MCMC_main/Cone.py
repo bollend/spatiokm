@@ -40,7 +40,6 @@ class Jet_model(object):
     jet_centre
     jet_orientation
 
-
     Raises
     ======
 
@@ -53,8 +52,14 @@ class Jet_model(object):
 
     """
 
-    def __init__(self, inclination, jet_angle, jet_type, jet_centre=np.array([0, 0, 0]),\
-                jet_orientation=np.array([0, 0, 1])):
+    def __init__(self,
+                inclination,
+                jet_angle,
+                jet_type,
+                jet_centre=np.array([0, 0, 0]),\
+                jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False):
 
         self.inclination     = inclination
         self.jet_angle       = jet_angle
@@ -62,6 +67,8 @@ class Jet_model(object):
         self.jet_orientation = jet_orientation
         self.ray             = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
         self.jet_type        = jet_type
+        self.jet_tilt        = jet_tilt
+        self.double_tilt     = double_tilt
 
         # if self.jet_type == 'disk_wind':
         #     self.jet_centre == jet_centre - z_h
@@ -121,7 +128,7 @@ class Jet_model(object):
             v2_u = v2
         return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
-    def entry_exit_ray_cone(self, origin_ray, angle_jet, jet_centre):
+    def entry_exit_ray_cone(self, origin_ray, angle_jet, jet_centre, jet_orientation=np.array([0,0,1])):
         """
         Calculate the discriminant of the second order equation for the intersection
         of a ray and a cone
@@ -140,11 +147,12 @@ class Jet_model(object):
             The second solution of the equation (at the jet exit).
 
         """
+
         CO = origin_ray - jet_centre
-        a  = np.dot(self.ray, self.jet_orientation)**2 - np.cos(angle_jet)**2
-        b  = 2 * (np.dot(self.ray, self.jet_orientation) * np.dot(CO, self.jet_orientation)\
+        a  = np.dot(self.ray, jet_orientation)**2 - np.cos(angle_jet)**2
+        b  = 2 * (np.dot(self.ray, jet_orientation) * np.dot(CO, jet_orientation)\
             - np.dot(self.ray, CO) * np.cos(angle_jet)**2)
-        c  = np.dot(CO, self.jet_orientation)**2 - \
+        c  = np.dot(CO, jet_orientation)**2 - \
             np.dot(CO,CO) * np.cos(angle_jet)**2
 
         Discriminant = b**2 - 4 * a * c
@@ -188,41 +196,115 @@ class Jet_model(object):
         """
         # Calculate the discriminant of the second order equation for the
         # intersection of the ray and the cone
-        jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre)
+        jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation)
 
-        if jet_entry_par == None:
+        check_south = False
+
+        if jet_entry_par is None:
             # The ray does not intersect the cone
+            check_south = True
             jet_entry, jet_exit, self.gridpoints = None, None, None
-        else:
-            # The ray intersects the cone at s1 and s2
-            if jet_entry_par < 0:
-                # The ray intersects the cone in the wrong direction (away from the observer)
-                # or the entry point is behind the star (the star is located in the jet)
-                jet_entry_par, jet_exit_par, self.gridpoints \
-                                        = None, None, None
 
-            elif self.jet_angle < self.inclination:
-                # The jet half-opening angle is smaller than
-                # the inclination angle of the system. The line-of-sight
-                # will have a jet entry and exit point.
+        elif jet_exit_par < 0:
+            # The ray intersects the cone in the wrong direction (away from the observer)
+            jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+            check_south = True
+
+        elif jet_entry_par > 0:
+            # the ray intersects the cone in the correct direction in two places
+            jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
+            jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+
+            if jet_pos_exit[2] < 0:
+                # The jet intersects the south cone
+
+                if double_tilt==True:
+
+                    check_south = True
+
+                else:
+
+                    jet_pos_parameters = np.linspace(jet_entry_par, \
+                                                jet_exit_par, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters,
+                                                                self.ray)
+
+            elif jet_pos_entry[2] > 0:
+                # The jet intersects the north cone
                 jet_pos_parameters = np.linspace(jet_entry_par, \
-                                    jet_exit_par, number_of_gridpoints)
+                                            jet_exit_par, number_of_gridpoints)
                 self.gridpoints    = origin_ray + np.outer(jet_pos_parameters,
-                                                       self.ray)
+                                                            self.ray)
 
-            elif self.jet_angle > self.inclination:
-                # The jet half-opening angle is larger than
-                # the inclination angle of the system. The line-of-sight
-                # will only have a jet entry point.
+            elif jet_pos_entry[2] < 0:
+                # The jet intersects both the north and south cone, but the star
+                # is located in the jet.
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        else:
+            # The jet intersects both the north and south cone.
+            jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
+            jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+
+            if jet_pos_entry[2] > 0 or jet_pos_exit[2] < 0:
+                # The star is in the north cone of the jet or in the south cone
+                # of the jet
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+            elif jet_pos_entry[2] < 0 and jet_pos_exit[2] > 0:
+                # The jet intersects the north cone in one point.
+                # (inclination angle < jet angle)
                 jet_entry_par = np.copy(jet_exit_par)
                 jet_exit_par  = None
                 jet_pos_parameters  = np.linspace(jet_entry_par,\
                                     jet_entry_par + 5., number_of_gridpoints)
                 self.gridpoints     = origin_ray + np.outer(jet_pos_parameters,
                                                             self.ray)
+            else:
+
+                check_south = True
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
 
-        return jet_entry_par, jet_exit_par, self.gridpoints
+        if check_south==True and double_tilt==True:
+            # We check for intersection with the south lobe
+            jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation*np.array([1.,1.,-1.]))
+
+            if jet_entry_par is None:
+                # The ray does not intersect the cone
+                jet_entry, jet_exit, self.gridpoints = None, None, None
+
+            elif jet_exit_par < 0:
+                # The ray intersects the cone in the wrong direction (away from the observer)
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+            elif jet_entry_par > 0:
+                # the ray intersects the cone in the correct direction in two places
+                jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
+                jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+
+                if jet_pos_exit[2] < 0:
+                    # The jet intersects the south cone
+                    jet_pos_parameters = np.linspace(jet_entry_par, \
+                                                jet_exit_par, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters,
+                                                                self.ray)
+
+                elif jet_pos_entry[2] > 0:
+                    # The jet intersects the north cone
+                    jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+                elif jet_pos_entry[2] < 0:
+                    # The jet intersects both the north and south cone, but the star
+                    # is located in the jet.
+                    jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+            else:
+                # The jet intersects both the north and south cone, so the ray
+                # doesn't go through the south cone in the right direction
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+
 
     #
     # def jet_azimuthal_velocity(self, positions_LOS, vel_keplerian, sma_primary,\
@@ -299,14 +381,17 @@ class Jet(Jet_model):
                 velocity_edge,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
-                jet_orientation=np.array([0, 0, 1])):
+                jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0
+                double_tilt=False):
 
         self.velocity_max     = velocity_max
         self.velocity_edge    = velocity_edge
         super().__init__(inclination, jet_angle, jet_type, jet_centre,\
-                        jet_orientation)
+                        jet_orientation, jet_tilt, double_tilt)
 
     def _set_gridpoints(self, origin_ray, number_of_gridpoints):
+
         self.jet_entry_par, self.jet_exit_par, self.gridpoints = \
                     self.intersection(origin_ray, self.jet_angle, self.jet_centre, number_of_gridpoints)
 
@@ -314,7 +399,13 @@ class Jet(Jet_model):
         """
         Sets the unit vector for the vector from the jet centre to the gridpoints.
         """
-        self.gridpoints_unit_vector = self.unit_vector(self.gridpoints - self.jet_centre)
+        if self.gridpoints is not None:
+
+            self.gridpoints_unit_vector = self.unit_vector(self.gridpoints - self.jet_centre)
+
+        else:
+
+            self.gridpoints_unit_vector = None
 
     def _set_gridpoints_polar_angle(self):
         """
@@ -322,10 +413,16 @@ class Jet(Jet_model):
         jet axis. The centre shift is applied when the centre of the cone is not located
         at the jet centre, i.e., for a disk wind.
         """
-        self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
-                                      self.jet_orientation, unit=True)
-        self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
-                = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
+        if self.gridpoints_unit_vector is not None:
+
+            self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
+                                          self.jet_orientation, unit=True)
+            self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
+                    = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
+
+        else:
+
+            self.polar_angle_gridpoints = None
 
     def radial_velocity(self, velocities, radvel_secondary):
         """
@@ -361,6 +458,8 @@ class Stellar_jet_simple(Jet):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False,
                 jet_cavity_angle=0):
 
         super().__init__(inclination,
@@ -369,7 +468,9 @@ class Stellar_jet_simple(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation)
+                        jet_orientation
+                        jet_tilt,
+                        double_tilt)
 
         self.jet_cavity_angle = jet_cavity_angle
 
@@ -419,6 +520,8 @@ class Stellar_jet(Jet):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False
                 jet_cavity_angle=0):
 
         super().__init__(inclination,
@@ -427,7 +530,9 @@ class Stellar_jet(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation)
+                        jet_orientation
+                        jet_tilt,
+                        double_tilt)
 
         self.exp_velocity     = exp_velocity
         self.jet_cavity_angle = jet_cavity_angle
@@ -480,9 +585,10 @@ class X_wind(Jet):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False,
                 jet_cavity_angle=0,
-                jet_angle_inner=0,
-                jet_velocity_inner=0):
+                jet_angle_inner=0,):
 
         super().__init__(inclination,
                         jet_angle,
@@ -490,12 +596,13 @@ class X_wind(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation)
+                        jet_orientation,
+                        jet_tilt,
+                        double_tilt)
 
         self.exp_velocity       = exp_velocity
         self.jet_cavity_angle   = jet_cavity_angle
         self.jet_angle_inner    = jet_angle_inner
-        self.jet_velocity_inner = jet_velocity_inner
 
     def poloidal_velocity(self, number_of_gridpoints, power):
         """
@@ -549,6 +656,8 @@ class X_wind_strict(Jet):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False
                 jet_cavity_angle=0):
 
         super().__init__(inclination,
@@ -557,7 +666,9 @@ class X_wind_strict(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation)
+                        jet_orientation,
+                        jet_tilt,
+                        double_tilt)
 
         self.jet_cavity_angle = jet_cavity_angle
         self.exp_velocity     = exp_velocity
@@ -612,6 +723,8 @@ class Disk_wind(Jet):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False,
                 jet_cavity_angle=0,
                 centre_shift=None):
 
@@ -621,16 +734,22 @@ class Disk_wind(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation)
+                        jet_orientation
+                        jet_tilt,
+                        double_tilt,)
 
-        self.centre_shift     = centre_shift
-        self.jet_cavity_angle = jet_cavity_angle
-        self.jet_centre_outflow = self.jet_centre - self.centre_shift
+        self.centre_shift             = centre_shift
+        self.jet_cavity_angle         = jet_cavity_angle
+        self.jet_centre_outflow_north = self.jet_centre - self.centre_shift
+        self.jet_centre_outflow_south = self.jet_centre + self.centre_shift
 
     def _set_gridpoints(self, origin_ray, number_of_gridpoints):
+
         self.jet_entry_par, self.jet_exit_par, self.gridpoints = \
-                    self.intersection(origin_ray, self.jet_angle,
-                                    self.jet_centre - self.centre_shift, number_of_gridpoints)
+                    self.intersection(origin_ray,
+                                    self.jet_angle,
+                                    self.jet_centre,
+                                    number_of_gridpoints)
 
     def _set_gridpoints_unit_vector(self, number_of_gridpoints):
         """
@@ -638,15 +757,177 @@ class Disk_wind(Jet):
         The centre shift is applied when the centre of the cone is not located
         at the jet centre, i.e., for a disk wind.
         """
-        indices_positive            = np.where(self.gridpoints[:,2] > 0)
-        indices_negative            = np.where(self.gridpoints[:,2] < 0)
-        self.gridpoints_unit_vector = np.zeros((number_of_gridpoints, 3))
+        if self.gridpoints is not None:
 
-        self.gridpoints_unit_vector[indices_positive[0],:] = \
-            self.unit_vector(self.gridpoints[indices_positive[0],:] - (self.jet_centre - self.centre_shift))
-        self.gridpoints_unit_vector[indices_negative[0],:] = \
-            self.unit_vector(self.gridpoints[indices_negative[0],:] - (self.jet_centre + self.centre_shift))
+            indices_north            = np.where(self.gridpoints[:,2] > 0)
+            indices_south            = np.where(self.gridpoints[:,2] < 0)
+            self.gridpoints_unit_vector = np.zeros((number_of_gridpoints, 3))
 
+            self.gridpoints_unit_vector[indices_north[0],:] = \
+                self.unit_vector(self.gridpoints[indices_north[0],:] - (self.jet_centre_outflow_north))
+            self.gridpoints_unit_vector[indices_south[0],:] = \
+                self.unit_vector(self.gridpoints[indices_south[0],:] - (self.jet_centre_outflow_south))
+
+        else:
+
+            self.gridpoints_unit_vector = None
+
+    def intersection(self, origin_ray, angle_jet, jet_centre, number_of_gridpoints):
+        """
+        Determines the coordinates of the intersection between the jet cone and
+        the line-of-sight for a disk wind
+
+        Parameters
+        ==========
+        origin_ray : array
+            The point on the surface of the primary which the line-of-sight
+            intersects
+        number_of_gridpoints : integer
+            The number of gridpoints along the line-of-sight through the jet
+        Returns
+        =======
+        jet_entry_par : float
+            Value of line-of-sight parameter 's' for which the line-of-sight
+            enters the jet.
+        jet_exit_par : float
+            Value of line-of-sight parameter 's' for which the line-of-sight
+            leaves the jet.
+        positions_along_los : array
+            The positions of the gridpoints along the line-of-sight that go
+            through the jet.
+
+        """
+        # Calculate the discriminant of the second order equation for the
+        # intersection of the ray and the cone
+
+        jet_entry_par_north, jet_exit_par_north = \
+                        self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_north)
+        jet_entry_par_south, jet_exit_par_south = \
+                        self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_south)
+        print(jet_entry_par_north, jet_exit_par_north,jet_entry_par_south, jet_exit_par_south)
+        if (jet_entry_par_north is None and jet_entry_par_south is None)\
+              or\
+           (jet_entry_par_north < 0 and jet_entry_par_south < 0):
+            # The ray does not intersect the north or south lobe
+            jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        elif (jet_entry_par_north is not None and jet_entry_par_south is None)\
+                or\
+             (jet_entry_par_north is not None and jet_entry_par_south < 0):
+            # The ray only intersects the north lobe or the ray intersects both
+            # lobes, but the south lobe in the wrong direction
+
+            if jet_entry_par_north < 0:
+                # The ray intersects the North cone in the wrong direction
+                # (away from the observer) or the entry point is behind the star
+                # (the star is located in the jet)
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+            elif self.jet_angle < self.inclination:
+                # The jet half-opening angle is smaller than the inclination
+                # angle of the system. The line-of-sight will have a jet entry
+                # and jet exit point.
+                jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                     jet_exit_par_north, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                jet_entry_par      = jet_entry_par_north
+                jet_exit_par       = jet_exit_par_north
+
+            elif self.jet_angle > self.inclination:
+                # The jet half-opening angle is larger than the inclination angle
+                # of the system. The line-of-sight will only have a jet entry point
+                jet_entry_par      = np.copy(jet_exit_par_north)
+                jet_exit_par       = None
+                jet_pos_parameters = np.linspace(jet_entry_par, \
+                                        jet_entry_par + 5., number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+        elif (jet_entry_par_north is None and jet_entry_par_south is notNone)\
+               or\
+             (jet_entry_par_north < 0 and jet_entry_par_south is not None):
+            # The ray only intersects the south lobe or the ray intersects both
+            # lobes, but the north lobe in the wrong direction
+
+            if jet_entry_par_south < 0:
+                # The ray intersects the south cone in the wrong direction
+                # (away from the observer) or the entry point is behind the star
+                # (the star is located in the jet)
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+            elif self.jet_angle < self.inclination:
+                # The jet half-opening angle is smaller than the inclination
+                # angle of the system. The line-of-sight will have a jet entry
+                # and jet exit point.
+                jet_entry_par      = jet_entry_par_south
+                jet_exit_par       = jet_exit_par_south
+                jet_pos_parameters = np.linspace(jet_entry_par, \
+                                     jet_exit_par, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+            elif self.jet_angle > self.inclination:
+                # The jet half-opening angle is larger than the inclination angle
+                # of the system. The line-of-sight will only have a jet entry point
+                jet_entry_par      = np.copy(jet_exit_par_south)
+                jet_exit_par       = None
+                jet_pos_parameters = np.linspace(jet_entry_par, \
+                                        jet_entry_par + 5., number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+        elif jet_entry_par_north > 0 and jet_exit_par_south > 0:
+            # The ray intersects both lobes in the right direction
+
+            if jet_entry_par_north < jet_entry_par_south:
+                # The ray intersects the north lobe
+
+                if self.jet_angle < self.inclination:
+                    # The jet half-opening angle is smaller than the inclination
+                    # angle of the system. The line-of-sight will have a jet entry
+                    # and jet exit point.
+                    jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                         jet_exit_par_north, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                    jet_entry_par      = jet_entry_par_north
+                    jet_exit_par       = jet_exit_par_north
+
+                elif self.jet_angle > self.inclination:
+                    # The jet half-opening angle is larger than the inclination angle
+                    # of the system. The line-of-sight will only have a jet entry point
+                    jet_entry_par      = np.copy(jet_exit_par_north)
+                    jet_exit_par       = None
+                    jet_pos_parameters = np.linspace(jet_entry_par, \
+                                            jet_entry_par + 5., number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+            elif jet_exit_par_south > jet_exit_par_north:
+                # The ray intersects the south lobe
+
+                if self.jet_angle < self.inclination:
+                    # The jet half-opening angle is smaller than the inclination
+                    # angle of the system. The line-of-sight will have a jet entry
+                    # and jet exit point.
+                    jet_entry_par      = jet_entry_par_south
+                    jet_exit_par       = jet_exit_par_south
+                    jet_pos_parameters = np.linspace(jet_entry_par, \
+                                         jet_exit_par, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+                elif self.jet_angle > self.inclination:
+                    # The jet half-opening angle is larger than the inclination angle
+                    # of the system. The line-of-sight will only have a jet entry point
+                    jet_entry_par      = np.copy(jet_exit_par_south)
+                    jet_exit_par       = None
+                    jet_pos_parameters = np.linspace(jet_entry_par, \
+                                            jet_entry_par + 5., number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+            else:
+                # The ray intersects both lobes in the right direction, which means
+                # the ray intersects the disk. Hence, the ray will be blocked by
+                # the disk.
+
+                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        return jet_entry_par, jet_exit_par, self.gridpoints
 
 class Sdisk_wind(Disk_wind):
     """
@@ -663,6 +944,8 @@ class Sdisk_wind(Disk_wind):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False,
                 jet_cavity_angle=0,
                 jet_angle_inner=None,
                 centre_shift=None):
@@ -674,6 +957,8 @@ class Sdisk_wind(Disk_wind):
                         jet_type,
                         jet_centre,
                         jet_orientation,
+                        jet_tilt,
+                        double_tilt,
                         jet_cavity_angle,
                         centre_shift)
 
@@ -694,8 +979,6 @@ class Sdisk_wind(Disk_wind):
         poloidal_velocity = np.zeros(number_of_gridpoints)
         indices_in        = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
         indices_out       = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
-        print(indices_in)
-        print(indices_out)
         v_edge_scaled     = self.scaling_par * self.velocity_edge
         v_M               = v_edge_scaled * np.tan(self.jet_angle)**.5
         v_in_scaled       = v_M * np.tan(self.jet_angle_inner)**-.5
@@ -706,7 +989,7 @@ class Sdisk_wind(Disk_wind):
                     / (self.jet_angle_inner - self.jet_cavity_angle) )**power
 
         ###### The outer velocities following a scaled Keplerian velocity
-        poloidal_velocity[indices_out] = v_M * np.tan(self.polar_angle_gridpoints[indices_out])**.5
+        poloidal_velocity[indices_out] = v_M * np.tan(self.polar_angle_gridpoints[indices_out])**-.5
 
         return poloidal_velocity
 
@@ -741,6 +1024,8 @@ class Sdisk_wind_strict(Disk_wind):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
+                jet_tilt=0,
+                double_tilt=False,
                 jet_cavity_angle=0,
                 centre_shift=None):
 
@@ -751,6 +1036,8 @@ class Sdisk_wind_strict(Disk_wind):
                         jet_type,
                         jet_centre,
                         jet_orientation,
+                        jet_tilt,
+                        double_tilt,
                         jet_cavity_angle,
                         centre_shift)
 
@@ -767,13 +1054,13 @@ class Sdisk_wind_strict(Disk_wind):
         """
         poloidal_velocity = np.zeros(number_of_gridpoints)
         indices           = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-        v_edge_scaled     = self.scaling_par * self.v_edge
+        v_edge_scaled     = self.scaling_par * self.velocity_edge
         v_M               = v_edge_scaled * np.tan(self.jet_angle)**.5
-        poloidal_velocity[indices] = v_M * np.tan(self.polar_angle_gridpoints[indices])**.5
+        poloidal_velocity[indices] = v_M * np.tan(self.polar_angle_gridpoints[indices])**-.5
 
         return poloidal_velocity
 
-    def density(self):
+    def density(self, number_of_gridpoints, power):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
