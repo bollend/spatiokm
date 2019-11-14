@@ -62,6 +62,35 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
 
     return grid_primary
 
+def calc_roche_radius(q, which_star):
+    """
+    Calculates the Roche radius of star
+
+    Parameters
+    ----------
+    q : float
+        Mass ratio of the system
+    which_star : str
+        Either the primary or secondary
+    sma : float
+        Semi-major axis of the evolved star (primary component)
+
+    Returns
+    -------
+    roche_radius : float
+        The Roche radius of the star in units of the semi-major axis of the primary
+    """
+    if which_star=='primary':
+
+        roche_radius = 0.49*q**(2./3) / (0.6*q**(2./3) + np.log(1 + q**(1./3)))*(1 + q)
+
+    else:
+
+        q_inv = q**-1
+        roche_radius = 0.49*q_inv**(2./3) / (0.6*q_inv**(2./3) + np.log(1 + q_inv**(1./3)))*(1 + q)
+
+    return roche_radius
+
 def calc_mass_sec(mp, inc, fm):
     '''
     Calculate the mass of the secondary component, given the mass of
@@ -155,7 +184,6 @@ def calc_launch_radius_velocity(mass_secondary, sma):
     keplerian_velocity : float
         The Keplerian velocity at the radius of the X-region in the inner
         disk
-    '''
     """
     # Determine the radius of the main-sequence star, using the empirical
     # mass-stellar radius relation of Demircan, 1991 in units of AU

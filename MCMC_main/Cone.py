@@ -61,15 +61,15 @@ class Jet_model(object):
                 jet_tilt=0,
                 double_tilt=False):
 
-        self.inclination     = inclination
-        self.jet_angle       = jet_angle
-        self.jet_centre      = jet_centre
-        self.jet_orientation = jet_orientation
-        self.ray             = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
-        self.jet_type        = jet_type
-        self.jet_tilt        = jet_tilt
-        self.double_tilt     = double_tilt
-
+        self.inclination             = inclination
+        self.jet_angle               = jet_angle
+        self.jet_centre              = jet_centre
+        self.jet_orientation         = jet_orientation
+        self.ray                     = np.array([0, np.sin(self.inclination), np.cos(self.inclination)])
+        self.jet_type                = jet_type
+        self.jet_tilt                = jet_tilt
+        self.double_tilt             = double_tilt
+        self.south_tilt_intersection = False
         # if self.jet_type == 'disk_wind':
         #     self.jet_centre == jet_centre - z_h
         # else:
@@ -198,7 +198,8 @@ class Jet_model(object):
         # intersection of the ray and the cone
         jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation)
 
-        check_south = False
+        check_south                  = False
+        self.south_tilt_intersection = False
 
         if jet_entry_par is None:
             # The ray does not intersect the cone
@@ -212,8 +213,8 @@ class Jet_model(object):
 
         elif jet_entry_par > 0:
             # the ray intersects the cone in the correct direction in two places
-            jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
-            jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+            jet_pos_entry = origin_ray + jet_entry_par * self.ray
+            jet_pos_exit = origin_ray + jet_exit_par * self.ray
 
             if jet_pos_exit[2] < 0:
                 # The jet intersects the south cone
@@ -243,8 +244,8 @@ class Jet_model(object):
 
         else:
             # The jet intersects both the north and south cone.
-            jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
-            jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+            jet_pos_entry = origin_ray + jet_entry_par * self.ray
+            jet_pos_exit = origin_ray + jet_exit_par * self.ray
 
             if jet_pos_entry[2] > 0 or jet_pos_exit[2] < 0:
                 # The star is in the north cone of the jet or in the south cone
@@ -280,8 +281,8 @@ class Jet_model(object):
 
             elif jet_entry_par > 0:
                 # the ray intersects the cone in the correct direction in two places
-                jet_pos_entry = origin_ray + np.outer(jet_entry_par, self.ray)
-                jet_pos_exit = origin_ray + np.outer(jet_exit_par, self.ray)
+                jet_pos_entry = origin_ray + jet_entry_par * self.ray
+                jet_pos_exit = origin_ray + jet_exit_par * self.ray
 
                 if jet_pos_exit[2] < 0:
                     # The jet intersects the south cone
@@ -289,6 +290,7 @@ class Jet_model(object):
                                                 jet_exit_par, number_of_gridpoints)
                     self.gridpoints    = origin_ray + np.outer(jet_pos_parameters,
                                                                 self.ray)
+                    self.south_tilt_intersection = True
 
                 elif jet_pos_entry[2] > 0:
                     # The jet intersects the north cone
@@ -304,7 +306,7 @@ class Jet_model(object):
                 # doesn't go through the south cone in the right direction
                 jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
-
+        return jet_entry_par, jet_exit_par, self.gridpoints
 
     #
     # def jet_azimuthal_velocity(self, positions_LOS, vel_keplerian, sma_primary,\
@@ -382,7 +384,7 @@ class Jet(Jet_model):
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
-                jet_tilt=0
+                jet_tilt=0,
                 double_tilt=False):
 
         self.velocity_max     = velocity_max
@@ -415,10 +417,18 @@ class Jet(Jet_model):
         """
         if self.gridpoints_unit_vector is not None:
 
-            self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
-                                          self.jet_orientation, unit=True)
-            self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
-                    = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
+            if self.double_tilt==False or self.south_tilt_intersection==False:
+
+                self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
+                                            self.jet_orientation, unit=True)
+                self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
+                        = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
+            else:
+
+                self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
+                                            self.jet_orientation*np.array([1.,1.,-1.]), unit=True)
+                self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
+                        = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
 
         else:
 
@@ -468,7 +478,7 @@ class Stellar_jet_simple(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation
+                        jet_orientation,
                         jet_tilt,
                         double_tilt)
 
@@ -480,26 +490,35 @@ class Stellar_jet_simple(Jet):
         The velocity for the gridpoints in the jet which have a polar angle
         smaller than the cavity angle is not calculated
         """
-        poloidal_velocity = np.zeros(number_of_gridpoints)
+        pol_velocity = np.zeros(number_of_gridpoints)
         indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-        poloidal_velocity[indices] = self.velocity_max + (self.velocity_edge - self.velocity_max)\
+        pol_velocity[indices] = self.velocity_max + (self.velocity_edge - self.velocity_max)\
                 * (np.abs(self.polar_angle_gridpoints[indices] - self.jet_cavity_angle)\
                 / (self.jet_angle - self.jet_cavity_angle) )**power
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
         """
+        if self.south_tilt_intersection==False:
 
-        density = np.zeros(number_of_gridpoints)
-        indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-        density[indices] = \
-                    (self.polar_angle_gridpoints[indices]\
-                    / self.jet_angle)**power \
-                    * self.gridpoints[indices,2]**-2
+            density = np.zeros(number_of_gridpoints)
+            indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+            density[indices] = \
+                        (self.polar_angle_gridpoints[indices]\
+                        / self.jet_angle)**power \
+                        * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
+        else:
+
+            density = np.zeros(number_of_gridpoints)
+            indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+            density[indices] = \
+                        (self.polar_angle_gridpoints[indices]\
+                        / self.jet_angle)**power \
+                        * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
 
         return density
 
@@ -521,7 +540,7 @@ class Stellar_jet(Jet):
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
                 jet_tilt=0,
-                double_tilt=False
+                double_tilt=False,
                 jet_cavity_angle=0):
 
         super().__init__(inclination,
@@ -530,7 +549,7 @@ class Stellar_jet(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation
+                        jet_orientation,
                         jet_tilt,
                         double_tilt)
 
@@ -543,29 +562,39 @@ class Stellar_jet(Jet):
         The velocity is not calculated for the gridpoints in the jet with
         a polar angle smaller than the cavity angle.
         """
-        poloidal_velocity = np.zeros(number_of_gridpoints)
+        pol_velocity = np.zeros(number_of_gridpoints)
         indices           = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+        e_exponent          = np.exp(self.exp_velocity)
 
         exp_angles = np.abs(self.polar_angle_gridpoints[indices] / self.jet_angle)**power
 
-        factor = ( self.exp_velocity**-(exp_angles) - self.exp_velocity**-1 )\
-                 / ( 1 - self.exp_velocity**-1 )
+        factor = ( e_exponent**-(exp_angles) - e_exponent**-1 )\
+                 / ( 1 - e_exponent**-1 )
 
-        poloidal_velocity[indices] \
+        pol_velocity[indices] \
                 = self.velocity_edge + (self.velocity_max - self.velocity_edge) * factor
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
         """
+        if self.south_tilt_intersection==False:
 
-        density = np.zeros(number_of_gridpoints)
-        indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-        density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
-                            * self.gridpoints[indices,2]**-2
+            density = np.zeros(number_of_gridpoints)
+            indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+                                * self.gridpoints[indices,2]**-2
+
+        else:
+
+            density = np.zeros(number_of_gridpoints)
+            indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+                                * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) \
+                                - self.jet_centre, self.jet_orientation)**-2
 
         return density
 
@@ -588,7 +617,7 @@ class X_wind(Jet):
                 jet_tilt=0,
                 double_tilt=False,
                 jet_cavity_angle=0,
-                jet_angle_inner=0,):
+                jet_angle_inner=0):
 
         super().__init__(inclination,
                         jet_angle,
@@ -610,18 +639,19 @@ class X_wind(Jet):
         The velocity is not calculated for the gridpoints in the jet with
         a polar angle smaller than the cavity angle.
         """
-        poloidal_velocity = np.zeros(number_of_gridpoints)
-        indices           = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-        exp_angles        = np.abs((self.polar_angle_gridpoints[indices] - self.jet_cavity_angle)\
+        pol_velocity = np.zeros(number_of_gridpoints)
+        indices      = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+        e_exponent   = np.exp(self.exp_velocity)
+        exp_angles   = np.abs((self.polar_angle_gridpoints[indices] - self.jet_cavity_angle)\
                 / (self.jet_angle - self.jet_cavity_angle) )**power
 
-        factor = ( self.exp_velocity**-(exp_angles) - self.exp_velocity**-1 )\
-                 / ( 1 - self.exp_velocity**-1 )
+        factor = ( e_exponent**-(exp_angles) - e_exponent**-1 )\
+                 / ( 1 - e_exponent**-1 )
 
-        poloidal_velocity[indices] \
+        pol_velocity[indices] \
                 = self.velocity_edge + (self.velocity_max - self.velocity_edge) * factor
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power_in, power_out):
         """
@@ -632,10 +662,19 @@ class X_wind(Jet):
         indices_in  = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
         indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
 
-        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
-                            * self.gridpoints[indices_in,2]**-2
-        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
-                            * self.gridpoints[indices_out,2]**-2
+        if self.south_tilt_intersection==False:
+
+            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
+                                * self.gridpoints[indices_in,2]**-2
+            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
+                                * self.gridpoints[indices_out,2]**-2
+
+        else:
+
+            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
+                                * np.dot(self.gridpoints[indices_in,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
+            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
+                                * np.dot(self.gridpoints[indices_out,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
 
         return density
 
@@ -657,7 +696,7 @@ class X_wind_strict(Jet):
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
                 jet_tilt=0,
-                double_tilt=False
+                double_tilt=False,
                 jet_cavity_angle=0):
 
         super().__init__(inclination,
@@ -679,18 +718,19 @@ class X_wind_strict(Jet):
         The velocity is not calculated for the gridpoints in the jet with
         a polar angle smaller than the cavity angle.
         """
-        poloidal_velocity = np.zeros(number_of_gridpoints)
+        pol_velocity = np.zeros(number_of_gridpoints)
         indices           = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+        e_exponent        = np.exp(self.exp_velocity)
         exp_angles        = np.abs((self.polar_angle_gridpoints[indices] - self.jet_cavity_angle)\
                 / (self.jet_angle - self.jet_cavity_angle))**power
 
-        factor = ( self.exp_velocity**-(exp_angles) - self.exp_velocity**-1 )\
-                 / ( 1 - self.exp_velocity**-1 )
+        factor = ( e_exponent**-(exp_angles) - e_exponent**-1 )\
+                 / ( 1 - e_exponent**-1 )
 
-        poloidal_velocity[indices] \
+        pol_velocity[indices] \
                 = self.velocity_edge + (self.velocity_max - self.velocity_edge) * factor
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power):
         """
@@ -701,9 +741,15 @@ class X_wind_strict(Jet):
         density = np.zeros(number_of_gridpoints)
         indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
 
-        density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
-                            * self.gridpoints[indices,2]**-2
+        if self.south_tilt_intersection==False:
 
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+                                * self.gridpoints[indices,2]**-2
+
+        else:
+
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+                                * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
         return density
 
 class Disk_wind(Jet):
@@ -734,9 +780,9 @@ class Disk_wind(Jet):
                         velocity_edge,
                         jet_type,
                         jet_centre,
-                        jet_orientation
+                        jet_orientation,
                         jet_tilt,
-                        double_tilt,)
+                        double_tilt)
 
         self.centre_shift             = centre_shift
         self.jet_cavity_angle         = jet_cavity_angle
@@ -804,7 +850,7 @@ class Disk_wind(Jet):
                         self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_north)
         jet_entry_par_south, jet_exit_par_south = \
                         self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_south)
-        print(jet_entry_par_north, jet_exit_par_north,jet_entry_par_south, jet_exit_par_south)
+
         if (jet_entry_par_north is None and jet_entry_par_south is None)\
               or\
            (jet_entry_par_north < 0 and jet_entry_par_south < 0):
@@ -976,7 +1022,7 @@ class Sdisk_wind(Disk_wind):
         a polar angle smaller than the cavity angle.
         """
 
-        poloidal_velocity = np.zeros(number_of_gridpoints)
+        pol_velocity = np.zeros(number_of_gridpoints)
         indices_in        = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
         indices_out       = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
         v_edge_scaled     = self.scaling_par * self.velocity_edge
@@ -984,14 +1030,14 @@ class Sdisk_wind(Disk_wind):
         v_in_scaled       = v_M * np.tan(self.jet_angle_inner)**-.5
 
         ###### The innner velocities
-        poloidal_velocity[indices_in] = self.velocity_max + (v_in_scaled - self.velocity_max)\
+        pol_velocity[indices_in] = self.velocity_max + (v_in_scaled - self.velocity_max)\
                     * ( np.abs(self.polar_angle_gridpoints[indices_in] - self.jet_cavity_angle)\
                     / (self.jet_angle_inner - self.jet_cavity_angle) )**power
 
         ###### The outer velocities following a scaled Keplerian velocity
-        poloidal_velocity[indices_out] = v_M * np.tan(self.polar_angle_gridpoints[indices_out])**-.5
+        pol_velocity[indices_out] = v_M * np.tan(self.polar_angle_gridpoints[indices_out])**-.5
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power_in, power_out):
         """
@@ -1052,13 +1098,13 @@ class Sdisk_wind_strict(Disk_wind):
         The velocity is not calculated for the gridpoints in the jet with
         a polar angle smaller than the cavity angle.
         """
-        poloidal_velocity = np.zeros(number_of_gridpoints)
+        pol_velocity = np.zeros(number_of_gridpoints)
         indices           = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
         v_edge_scaled     = self.scaling_par * self.velocity_edge
         v_M               = v_edge_scaled * np.tan(self.jet_angle)**.5
-        poloidal_velocity[indices] = v_M * np.tan(self.polar_angle_gridpoints[indices])**-.5
+        pol_velocity[indices] = v_M * np.tan(self.polar_angle_gridpoints[indices])**-.5
 
-        return poloidal_velocity
+        return pol_velocity
 
     def density(self, number_of_gridpoints, power):
         """
