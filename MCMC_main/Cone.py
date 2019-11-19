@@ -109,6 +109,7 @@ class Jet_model(object):
         """
         Returns the unit vector of the vector.
         """
+        print(vector)
         vector_norm = np.linalg.norm(vector, axis=1)
         vector_norm_T = np.array([vector_norm]).T
         return vector / vector_norm_T
@@ -434,6 +435,16 @@ class Jet(Jet_model):
 
             self.polar_angle_gridpoints = None
 
+    def _set_orientation(self, travel_direction):
+        """
+        Sets the orientation of the jet axis
+        """
+        a = np.array([0,0,1])
+        v = self.unit_vector(travel_direction)
+        r = np.cross(a,v)
+
+        self.orientation = a * np.cos(self.jet_tilt) + np.cross(r,a) * np.sin(self.jet_tilt) + r * np.dot(r,a) * (1 - np.cos(self.jet_tilt))
+
     def radial_velocity(self, velocities, radvel_secondary):
         """
         Calculates the radial velocity of the jet velocities along the grid points
@@ -466,6 +477,7 @@ class Stellar_jet_simple(Jet):
                 velocity_max,
                 velocity_edge,
                 jet_type,
+                power_density,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
                 jet_tilt=0,
@@ -483,6 +495,7 @@ class Stellar_jet_simple(Jet):
                         double_tilt)
 
         self.jet_cavity_angle = jet_cavity_angle
+        self.power_density    = power_density
 
     def poloidal_velocity(self, number_of_gridpoints, power):
         """
@@ -498,7 +511,7 @@ class Stellar_jet_simple(Jet):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -509,7 +522,7 @@ class Stellar_jet_simple(Jet):
             indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
             density[indices] = \
                         (self.polar_angle_gridpoints[indices]\
-                        / self.jet_angle)**power \
+                        / self.jet_angle)**self.power_density \
                         * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
         else:
 
@@ -517,7 +530,7 @@ class Stellar_jet_simple(Jet):
             indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
             density[indices] = \
                         (self.polar_angle_gridpoints[indices]\
-                        / self.jet_angle)**power \
+                        / self.jet_angle)**self.power_density \
                         * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
 
         return density
@@ -536,6 +549,7 @@ class Stellar_jet(Jet):
                 velocity_max,
                 velocity_edge,
                 exp_velocity,
+                power_density,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
@@ -554,6 +568,7 @@ class Stellar_jet(Jet):
                         double_tilt)
 
         self.exp_velocity     = exp_velocity
+        self.power_density    = power_density
         self.jet_cavity_angle = jet_cavity_angle
 
     def poloidal_velocity(self, number_of_gridpoints, power):
@@ -576,7 +591,7 @@ class Stellar_jet(Jet):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -585,14 +600,14 @@ class Stellar_jet(Jet):
 
             density = np.zeros(number_of_gridpoints)
             indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
                                 * self.gridpoints[indices,2]**-2
 
         else:
 
             density = np.zeros(number_of_gridpoints)
             indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
                                 * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) \
                                 - self.jet_centre, self.jet_orientation)**-2
 
@@ -611,6 +626,8 @@ class X_wind(Jet):
                 velocity_max,
                 velocity_edge,
                 exp_velocity,
+                power_density_in,
+                power_density_out,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
@@ -630,6 +647,8 @@ class X_wind(Jet):
                         double_tilt)
 
         self.exp_velocity       = exp_velocity
+        self.power_density_in   = power_density_in
+        self.power_density_out  = power_density_out
         self.jet_cavity_angle   = jet_cavity_angle
         self.jet_angle_inner    = jet_angle_inner
 
@@ -653,7 +672,7 @@ class X_wind(Jet):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power_in, power_out):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -664,16 +683,16 @@ class X_wind(Jet):
 
         if self.south_tilt_intersection==False:
 
-            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
+            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
                                 * self.gridpoints[indices_in,2]**-2
-            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
+            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
                                 * self.gridpoints[indices_out,2]**-2
 
         else:
 
-            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
+            density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
                                 * np.dot(self.gridpoints[indices_in,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
-            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
+            density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
                                 * np.dot(self.gridpoints[indices_out,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
 
         return density
@@ -692,6 +711,7 @@ class X_wind_strict(Jet):
                 velocity_max,
                 velocity_edge,
                 exp_velocity,
+                power_density,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
@@ -711,6 +731,7 @@ class X_wind_strict(Jet):
 
         self.jet_cavity_angle = jet_cavity_angle
         self.exp_velocity     = exp_velocity
+        self.power_density    = power_density
 
     def poloidal_velocity(self, number_of_gridpoints, power):
         """
@@ -732,7 +753,7 @@ class X_wind_strict(Jet):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -743,12 +764,12 @@ class X_wind_strict(Jet):
 
         if self.south_tilt_intersection==False:
 
-            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
                                 * self.gridpoints[indices,2]**-2
 
         else:
 
-            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**power \
+            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
                                 * np.dot(self.gridpoints[indices,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
         return density
 
@@ -987,6 +1008,8 @@ class Sdisk_wind(Disk_wind):
                 velocity_max,
                 velocity_edge,
                 scaling_par,
+                power_density_in,
+                power_density_out,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
@@ -1011,6 +1034,8 @@ class Sdisk_wind(Disk_wind):
         self.jet_centre_outflow = self.jet_centre - self.centre_shift
         self.jet_angle_inner    = jet_angle_inner
         self.scaling_par        = scaling_par
+        self.power_density_in      = power_density_in
+        self.power_density_out      = power_density_out
 
     def poloidal_velocity(self, number_of_gridpoints, power):
         """
@@ -1039,7 +1064,7 @@ class Sdisk_wind(Disk_wind):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power_in, power_out):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -1048,9 +1073,9 @@ class Sdisk_wind(Disk_wind):
         indices_in  = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
         indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
 
-        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**power_in \
+        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
                             * self.gridpoints[indices_in,2]**-2
-        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**power_out \
+        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
                             * self.gridpoints[indices_out,2]**-2
 
         return density
@@ -1067,6 +1092,7 @@ class Sdisk_wind_strict(Disk_wind):
                 velocity_max,
                 velocity_edge,
                 scaling_par,
+                power_density,
                 jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
@@ -1089,6 +1115,7 @@ class Sdisk_wind_strict(Disk_wind):
 
         self.jet_centre_outflow = jet_centre - centre_shift
         self.scaling_par        = scaling_par
+        self.power_density      = power_density
 
     def poloidal_velocity(self, number_of_gridpoints, power):
         """
@@ -1106,7 +1133,7 @@ class Sdisk_wind_strict(Disk_wind):
 
         return pol_velocity
 
-    def density(self, number_of_gridpoints, power):
+    def density(self, number_of_gridpoints):
         """
         The density in the jet for each gridpoint. The density is a function
         of the polar angle and the height of the jet.
@@ -1114,7 +1141,7 @@ class Sdisk_wind_strict(Disk_wind):
         density = np.zeros(number_of_gridpoints)
         indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
 
-        density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_cavity_angle)**power \
+        density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_cavity_angle)**self.power_density \
                             * self.gridpoints[indices,2]**-2
 
         return density

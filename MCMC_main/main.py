@@ -1,28 +1,18 @@
 import sys
 sys.path.append('/lhome/dylanb/astronomy/MCMC_main/MCMC_main')
 sys.path.append('/lhome/dylanb/astronomy/MCMC_main/MCMC_main/tools')
-sys.path.append('/lhome/dylanb/astronomy/jet_accretion/jet_accretion')
 import os
 import shutil
 import argparse
 import numpy as np
-import matplotlib.pylab as plt
-import scipy
-from scipy.constants import *
-from scipy import integrate
-from sympy import mpmath as mp
-import ionisation_excitation as ie
-import radiative_transfer as rt
 import pickle
 import Cone
 import geometry_binary
-import scale_intensity
-from radiative_transfer import *
 from astropy import units as u
 import parameters_DICT
 import uncertainty_DICT
-import datetime
-import EW
+import emcee
+from emcee.utils import MPIPool
 import MCMC
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -79,6 +69,7 @@ parameters['BINARY']['T_inf'] = geometry_binary.T0_to_IC(parameters['BINARY']['o
                                                          parameters['BINARY']['ecc'],
                                                          parameters['BINARY']['period'],
                                                          parameters['BINARY']['T0'])
+
 """
 ===============
 Stellar spectra
@@ -143,6 +134,15 @@ if parameters['OTHER']['cut_waveregion']==True:
             if parameters['OTHER']['uncertainty_back']==True:
 
                 standard_deviation[phase][spectrum] = standard_deviation[phase][spectrum][wavmin:wavmax]
+
+###### Calculate the total number of datapoints
+datapoints = 0
+for phase in spectra_observed.keys():
+    for spectrum in spectra_observed[phase].keys():
+        datapoints += len(spectra_observed[phase][spectrum])
+
+parameters['OTHER']['total_datapoints'] = datapoints
+
 """
 ==================
 Main MCMC sampling
@@ -154,16 +154,14 @@ parameters, parameters_init = \
                                   prev_chain=parameters['OTHER']['previous_walkers'],
                                   dir_previous_chain=parameters['OTHER']['dir_previous_chain'])
 
-###### Calculate any additional parameters according to the chosen set of parameters
-
 ###### Check if the priors are in the accepted range ###########################
-for walker in parameters['OTHER']['n_walkers']:
+for walker in range(parameters['OTHER']['n_walkers']):
 
     parameters_add = MCMC.calc_additional_par(parameters, parameters_init[walker,:])
 
     while MCMC.ln_prior(parameters_init[walker,:], parameters, parameters_add) == -np.inf:
 
-        parameters_init[walker,:] = MCMC.mcmc_initial_positions(parameters,
+        pars, parameters_init[walker,:] = MCMC.mcmc_initial_positions(parameters,
                                       prev_chain=parameters['OTHER']['previous_walkers'],
                                       dir_previous_chain=parameters['OTHER']['dir_previous_chain'],
                                       single_walker=True)
@@ -175,8 +173,16 @@ pool = MPIPool()
 if not pool.is_master():
     pool.wait()
     syst.exit(0)
+spectra_observed = {1: {'2': np.array([1,1,2,1])}}
+spectra_background = {1: {'2': np.array([2,2,2,2])}}
+spectra_wavelengths = {1: {'2': np.array([1,2,3,4])}}
+standard_deviation = {1: {'2': np.array([0.1,0.1,0.2,0.1])}}
 
-sampler = emcee.EnsembleSampler(parameters['OTHER']['n_walkers'], len(parameters['MODEL'].keys()), probab, args=(data_spectra, parameters, parameters_add), pool=pool)
+sampler = emcee.EnsembleSampler(parameters['OTHER']['n_walkers'],
+                                len(parameters['MODEL'].keys()),
+                                MCMC.ln_probab,
+                                args=(parameters,spectra_observed, spectra_background, spectra_wavelengths, standard_deviation),
+                                pool=pool)
 
 ###### create the output file for the chain ####################################
 
@@ -197,6 +203,8 @@ while NewDirCreated==False:
         NewDirNumber += 1
 
 OutputDir = OutputDir+'_'+str(NewDirNumber)
+
+shutil.copyfile(InputDir+InputFile, OutputDir+'/'+InputFile)
 
 f = open(OutputDir+'/MCMC_chain_output.dat', 'a')
 f.close()

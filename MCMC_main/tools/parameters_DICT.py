@@ -2,6 +2,7 @@
 create the parameter dictionary
 '''
 import eval_type
+import numpy
 
 def create_parameters(inputfile):
     with open(inputfile) as f:
@@ -13,6 +14,7 @@ def create_parameters(inputfile):
     parameters= {}
 
     for l in lines:
+
         split_lines = l.split()
 
         if split_lines[0]=='FINISH':
@@ -48,3 +50,20 @@ def create_parameters(inputfile):
                    which_line = 'new'
 
     return parameters
+
+def degrees_to_radians(parameter):
+    """
+    Change the units from degrees to radians
+    """
+    degr_to_rad = np.pi/180.
+
+    parameter['min'] *= degr_to_rad
+    parameter['max'] *= degr_to_rad
+    # 
+    # for key in parameter.keys():
+    #
+    #     if not key=='id':
+    #
+    #         parameter[key] *= degr_to_rad
+
+    return parameter

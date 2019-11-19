@@ -1,115 +1,94 @@
-import numpy
+import numpy as np
 import sys
 import os, glob
 import pickle
 from scipy import constants
 import emcee
 from emcee.utils import MPIPool
+import geometry_binary
+import Star
+import Cone
+import create_jet
+from scipy import constants
+AU              = 1.496e+11     # 1AU in m
 
 
-# def MCMC_main(spectra_observed, spectra_background, standard_deviation, pars):
-#     """
-#     Main function to start the MCMC sampling.
-#
-#     Parameters
-#     ==========
-#
-#     spectra_observed : dictionary
-#         The observed spectra ordered per phase
-#     spectra_background : dictionary
-#         The background spectra ordered per phase
-#     standard_deviation : dictionary
-#         The standard deviation of the spectra
-#     parameters : dictionary
-#         The model parameters, mcmc parameters and system parameters
-#
-#     """
-#     ###### Set the initial positions of the walkers
-#     parameters, parameters_init = \
-#                 mcmc_initial_positions(parameters,
-#                                       prev_chain=parameters['OTHER']['previous_walkers'],
-#                                       dir_previous_chain=parameters['OTHER']['dir_previous_chain'])
-#
-#     ###### Calculate any additional parameters according to the chosen set of parameters
-#
-#     ###### Check if the priors are in the accepted range
-#     for walker in parameters['OTHER']['n_walkers']:
-#
-#         parameters_add = calc_additional_par(parameters, parameters_init[walker,:])
-#
-#         while ln_prior(parameters_init[walker,:], parameters, parameters_add) == -np.inf:
-#
-#             parameters_init[walker,:] = mcmc_initial_positions(parameters,
-#                                           prev_chain=parameters['OTHER']['previous_walkers'],
-#                                           dir_previous_chain=parameters['OTHER']['dir_previous_chain'],
-#                                           single_walker=True)
-#             parameters_add = calc_additional_par(parameters, parameters_init[walker,:])
-#
-#     ###### Create the pool
-#     pool = MPIPool()
-#
-#     if not pool.is_master():
-#         pool.wait()
-#         syst.exit(0)
-#
-#     sampler = emcee.EnsembleSampler(parameters['OTHER']['n_walkers'], len(parameters['MODEL'].keys()), probab, args=(data_spectra, parameters, parameters_add), pool=pool)
-#
-#     ###### create the output file for the chain
-#     OutputDir = '../MCMC_output/'+parameters['OTHER']['object_id']+'/results_'+parameters['OTHER']['jet_type']+'/output'
-#
-#     NewDirNumber  = 0
-#     NewDirCreated = False
-#
-#     while NewDirCreated==False:
-#
-#         if not os.path.exists(OutputDir+'_'+str(NewDirNumber)):
-#
-#             os.makedirs(OutputDir+'_'+str(NewDirNumber))
-#             NewDirCreated = True
-#
-#         else:
-#
-#             NewDirNumber += 1
-#
-#     OutputDir = OutputDir+'_'+str(NewDirNumber)
-#
-#     f = open(OutputDir+'/MCMC_chain_output.dat', 'a')
-#     f.close()
-#
-#     ###### Run the mcmc chain
-#     for result in sampler.sample(parameters_init, iterations=parameters['OTHER']['n_iter'], storechain=False):
-#         position = result[0]
-#         f = open(OutputDir+'/MCMC_chain_output.dat', 'a')
-#         np.savetxt(f, np.array(position))
-#         f.close()
+def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
+    """
+        Calculates the amount of absorption of the light that travels through
+        the jet
 
+    Parameters
+    ==========
+    pars: dictionary
+        All parameters
+    pars_walker : np.array
+        The model parameters of the walker
+    pars_add : dictionary
+        The additional parameters that have to be calculated
+    data_spectra : dictionary
+        The observed spectra ordered per phase
+    wavelengths_spectra : np.array
+        The wavelength array of the spectra
+    jet : object
+        The jet object
+    postAGB : object
+        The star object representing the post-AGB star
 
+    Returns
+    =======
+    Intensity : np.array
+        The intensity at each wavelength (assuming an initial normalised
+        intensity of 1)
+    """
+    intensity = np.zeros(len(wavelengths_spectra))
 
+    for pointAGB, coordAGB in enumerate(postAGB.grid_location):
+        ###### For each ray of light from a grid point on the post-AGB star,
+        ###### we calculate the absorption by the jet
 
-# def run_burn_in(sampler, mc, p0, sourcename, folder, setnr):
-# def run_mcmc(sampler, pburn, sourcename, folder, mc):
-# def jet_binary_setup(pars, pars_walker, data_spectra):
-#     """
-#         creates the jet and binary object.
-#
-#     Parameters
-#     ==========
-#     pars : dictionary
-#         All parameters
-#     pars_walker : np.array
-#         The model parameters of the walker
-#     data_spectra : dictionary
-#         The observed spectra ordered per phase
-#     Returns
-#     =======
-#     jet : object
-#         a jet object
-#     postAGB : object
-#         a star object
-#     """
+        jet._set_gridpoints(coordAGB, gridpoints_LOS)
 
+        if jet.gridpoints is None:
+            ###### The ray does not pass through the jet
 
-def ln_likelihood(pars, pars_add, pars_model, data_spectra):
+            intensity_pointAGB = pars['OTHER']['gridpoints_primary']**-1 * np.ones(len(wavelengths_spectra))
+
+        else:
+            ###### the ray passes through the jet
+
+            jet._set_gridpoints_unit_vector()
+            jet._set_gridpoints_polar_angle()
+
+            ###### The jet velocity and density
+            scaling_par_od          = -10**pars_walker[pars['MODEL']['c_optical_depth']['id']] # The scaling parameter
+            optical_depth_ray       = np.zeros(len(wavelength_spectra)) # The scaled optical depth at each wavelength bin
+            jet_density_scaled      = jet.density(pars['OTHER']['gridpoints_LOS']) # The scaled number density of the jet
+            jet_velocity            = jet.poloidal_velocity(pars['OTHER']['gridpoints_LOS'], pars['OTHER']['power_velocity']) # The velocity of the jet at each gridpoint (km/s)
+            jet_radvel_km_per_s     = jet.radial_velocity(jet_velocity, pars_add['secondary_rad_vel']) # Radial velocity of each gridpoint (km/s)
+            jet_delta_gridpoints_AU = np.linalg.norm(jet.gridpoints[0,:] - jet.gridpoints[1,:]) # The length of each gridpoint (AU)
+            jet_delta_gridpoints_m  = jet_delta_gridpoints_AU * AU  # The length of each gridpoint (m)
+            # The shifted central wavelength of the line
+            jet_wavelength_0_rv     = pars['OTHER']['wave_center'] * ( 1. + jet_radvel_m_per_s / constants.c )
+
+            # diff_wavelength = np.abs(jet_wavelength_0_rv - pars['OTHER']['wave_center'])
+            indices_wavelengths   = [ np.abs(wave - wavelengths_spectra).argmin() for wave in jet_wavelength_0_rv]
+            optical_depth_ray_LOS = jet_density_scaled * jet_delta_gridpoints_AU # The scaled optical depth for each gridpoint along the LOS
+            np.add.at(optical_depth_ray, indices_wavelengths, optical_depth_ray_LOS)
+
+            intensity_pointAGB = pars['OTHER']['gridpoints_primary']**-1 * np.exp(scaling_par_od * optical_depth_ray)
+
+        intensity += intensity_pointAGB
+
+    return intensity
+
+def ln_likelihood(pars,
+                  pars_walker,
+                  pars_add,
+                  data_spectra,
+                  background_spectra,
+                  wavelengths_spectra,
+                  standard_deviation):
     """
         Calculates the likelihood function of the model.
 
@@ -123,17 +102,35 @@ def ln_likelihood(pars, pars_add, pars_model, data_spectra):
         The additional parameters that have to be calculated
     data_spectra : dictionary
         The observed spectra ordered per phase
+    background_spectra : dictionary
+        The background spectra ordered per phase
+    wavelengths_spectra : np.array
+        The wavelength array
+    standard_deviation : dictionary
+        The standard deviation ordered per phase
     Returns
     =======
     Likelihood : float
         The log likelihood of the model
     """
+    ###### Create the post-AGB star with a Fibonacci grid
+    postAGB = Star.Star(pars_walker[pars['MODEL']['primary_radius']['id']],
+                        np.array([0,0,0]),
+                        pars_walker[pars['MODEL']['inclination']['id']],
+                        pars['OTHER']['gridpoints_primary'])
+
+    ###### Create the jet
+    jet = create_jet.create_jet(pars['OTHER']['jet_type'], pars, pars_walker)
 
     ###### create the binary orbit
     primary_orbit   = {}
     secondary_orbit = {}
 
+    chi_squared   = 0
+    ln_likelihood = 0
+
     for phase in data_spectra.keys():
+    ###### iterate over each orbital phase
 
         prim_pos, sec_pos, prim_vel, sec_vel = geometry_binary.pos_vel_primary_secondary(
                                            phase,
@@ -146,16 +143,39 @@ def ln_likelihood(pars, pars_add, pars_model, data_spectra):
                                            pars['BINARY']['T0'])
 
 
-    for phase in phases:
-        ###### iterate over each orbital phase
+        postAGB.centre = prim_pos
+        jet.jet_centre = sec_pos
+        if pars['OTHER']['tilt']==True:
 
-        postAGB.entre = primary_orbit[phase]['position']
-        jet.jet_centre = secondary_orbit[phase]['position']
+            jet.jet_orientation = jet._set_orientation(np.array([sec_vel]))
+
+        postAGB._set_grid()
         postAGB._set_grid_location()
 
+        intensity = model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB)
+
+        for spectrum in spectra_observed[phase].keys():
+            ###### Iterate over all spectra with this phase
+
+            sigma_squared                = standard_deviation[phase][spectrum]**2
+            model_spectrum               = background_spectra[phase][spectrum] * intensity
+            chi_squared_spectrum_array   = (data_spectra[phase][spectrum] - model_spectrum)**2 / sigma_squared
+            ln_likelihood_spectrum_array = -0.5 * (chi_squared_spectrum_array + np.log(2. * np.pi * sigma_squared))
+            chi_squared_spectrum         = np.sum(chi_squared_spectrum_array)
+            ln_likelihood_spectrum       = np.sum(ln_likelihood_spectrum_array)
+
+            chi_squared   += chi_squared_spectrum
+            ln_likelihood += ln_likelihood_spectrum
+
+    return chi_squared, ln_likelihood
 
 
-def ln_probab(pars, pars_walker, data_spectra):
+def ln_probab(pars_walker,
+              pars,
+              data_spectra,
+              background_spectra,
+              wavelengths_spectra,
+              standard_deviation):
     """
         Calculates the probability of the model.
 
@@ -174,19 +194,19 @@ def ln_probab(pars, pars_walker, data_spectra):
     """
     pars_add = calc_additional_par(pars, pars_walker)
 
-    lp = ln_prior(pars_walker, pars, parameters_add)
+    lp = ln_prior(pars_walker, pars, pars_add)
 
     if np.isfinite(lp):
 
-        probability, intensity = lp + ln_likelihood(pars, pars_walker, pars_add, data_spectra)
+        chi_squared, probability = lp + ln_likelihood(pars, pars_walker, pars_add, data_spectra, background_spectra, wavelengths_spectra, standard_deviation)
 
         return probability
 
     return -np.inf
 
-def ymodel(data_nus, z, dictkey_arrays, dict_modelfluxes, *par):
+# def ymodel(data_nus, z, dictkey_arrays, dict_modelfluxes, *par):
 
-def ln_prior(pars, pars_walker, pars_add):
+def ln_prior(pars_walker, pars, pars_add):
     """
         Flat priors. The probability is set to -infty if one of the conditions
         is not met.
@@ -206,28 +226,38 @@ def ln_prior(pars, pars_walker, pars_add):
 
     """
 
+    jet_angle_id = pars['MODEL']['jet_angle']['id']
+    incl_id      = pars['MODEL']['inclination']['id']
+    radius_id    = pars['MODEL']['primary_radius']['id']
+    v_max_id     = pars['MODEL']['velocity_max']['id']
+    v_edge_id    = pars['MODEL']['velocity_edge']['id']
+
     probability = 0.0
-    jet_height_above_star = pars_add['primary_sma_AU'] * ( 1 + pars_add['mass_ratio']) / np.tan(pars_walker['jet_angle'])
+    jet_height_above_star = pars_add['primary_sma_AU'] * ( 1 + pars_add['mass_ratio']) / np.tan(pars_walker[jet_angle_id])
 
     ###### Primary radius and jet velocity
-    if not (pars_walker['primary_radius'] < jet_height_above_star
-            and pars['MODEL']['primary_radius']['min'] < pars_walker['primary_radius'] < 0.7 * pars_add['roche_radius_primary']
-            and pars_walker['velocity_edge'] < pars_walker['velocity_max']
+    if not (pars_walker[radius_id] < jet_height_above_star
+            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.7 * pars_add['roche_radius_primary']
+            and pars_walker[v_edge_id] < pars_walker[v_max_id]
     ):
 
         probability = -np.inf
 
     ###### All model parameters are within the correct range
-    for param in pars_walker.keys():
+    for param in pars['MODEL'].keys():
 
-        if not pars['MODEL'][param]['min'] < pars_walker[param] < pars['MODEL'][param]['max']:
+        param_id = pars['MODEL'][param]['id']
+
+        if not pars['MODEL'][param]['min'] < pars_walker[param_id] < pars['MODEL'][param]['max']:
 
             probability = -np.inf
 
     if not probability==-np.inf:
 
         ###### The jet cavity angle is smaller than the inner jet angle or jet angle
-        if 'jet_cavity_angle' in pars_walker.keys():
+        if 'jet_cavity_angle' in pars['MODEL'].keys():
+
+            cavity_id = pars['MODEL']['jet_cavity_angle']['id']
 
             if (pars['OTHER']['jet_type']=='stellar_jet_simple'
                 or pars['OTHER']['jet_type']=='stellar_jet'
@@ -235,7 +265,7 @@ def ln_prior(pars, pars_walker, pars_add):
                 or pars['OTHER']['jet_type']=='sdisk_wind_strict'
             ):
 
-                if not pars_walker['jet_cavity_angle'] < pars_walker['jet_angle']:
+                if not pars_walker[cavity_id] < pars_walker[jet_angle_id]:
 
                     probability = -np.inf
 
@@ -243,14 +273,16 @@ def ln_prior(pars, pars_walker, pars_add):
                   or pars['OTHER']['jet_type']=='sdisk_wind'
             ):
 
-                if not pars_walker['jet_cavity_angle'] < pars_walker['jet_angle_inner']:
+                if not pars_walker[cavity_id] < pars_walker[jet_angle_id]:
 
                     probability = -np.inf
 
         ###### The jet inner angle is smaller than the jet outer angle
         if pars['OTHER']['jet_type']=='sdisk_wind' or pars['OTHER']['jet_type']=='x_wind':
 
-                if not pars_walker['jet_angle_inner'] < pars_walker['jet_angle']:
+                jet_angle_inner_id = pars['MODEL']['jet_angle_inner']['id']
+
+                if not pars_walker[jet_angle_inner_id] < pars_walker[jet_angle_id]:
 
                     probability = -np.inf
 
@@ -288,23 +320,20 @@ def calc_additional_par(pars, pars_walker):
 
     incl_id              = pars['MODEL']['inclination']['id']
 
-    secondary_mass       = geometry_binary.calc_mass_sec(pars['BINARY']['mass_prim'],
+    secondary_mass       = geometry_binary.calc_mass_sec(pars['BINARY']['primary_mass'],
                                                 pars_walker[incl_id],
-                                                pars['BINARY']['mass_function']):
+                                                pars['BINARY']['mass_function'])
 
-    mass_ratio           = pars['BINARY']['mass_prim'] / secondary_mass
+    mass_ratio           = pars['BINARY']['primary_mass'] / secondary_mass
 
     primary_sma_AU       = pars['BINARY']['primary_asini'] / pars_walker[incl_id]
     secondary_sma_AU     = mass_ratio * primary_sma_AU
     roche_radius_primary = geometry_binary.calc_roche_radius(mass_ratio, 'primary')
 
-    primary_orb_vel      = pars['BINARY'][primary_rad_vel] / pars_walker[inclination]
+    primary_orb_vel      = pars['BINARY']['primary_rad_vel'] / pars_walker[incl_id]
     secondary_orb_vel    = primary_orb_vel * mass_ratio
-    secondary_rad_vel    = pars['BINARY'][primary_rad_vel] * mass_ratio
-###### Binary system and stellar parameters from jet solution ##################
-primary_max_vel     = primary_rad_vel / np.sin(inclination) # Orbital velocity (km/s)
-secondary_rad_vel   = primary_rad_vel * mass_ratio        # Radial velocity secondary (km/s)
-secondary_max_vel   = primary_max_vel * mass_ratio        # Orbital velocity secondary (km/s)
+    secondary_rad_vel    = pars['BINARY']['primary_rad_vel'] * mass_ratio
+
     pars_add = {'primary_sma_AU': primary_sma_AU,
                       'secondary_sma_AU' : secondary_sma_AU,
                       'secondary_mass': secondary_mass,
@@ -318,12 +347,12 @@ secondary_max_vel   = primary_max_vel * mass_ratio        # Orbital velocity sec
         G                  = constants.gravitational_constant
         M_sun              = 1.98847e30
         AU                 = 1.496e11
-        R_sun              =
+        R_sun              = 6.9551e8
         velocity_edge_id   = pars['MODEL']['velocity_edge']['id']
         velocity_max_id    = pars['MODEL']['velocity_max']['id']
         jet_angle_id       = pars['MODEL']['jet_angle']['id']
         jet_angle_inner_id = pars['MODEL']['jet_angle_inner']['id']
-        v_M                = pars_walker[velocity_edge_id] * np.tan(pars_walker[jet_angle])**.5
+        v_M                = pars_walker[velocity_edge_id] * np.tan(pars_walker[jet_angle_id])**.5
         v_in               = v_M * np.tan(pars_walker[jet_angle_inner_id])
         secondary_radius   = 1.01*mass_sec**0.724 * R_sun / AU
         roche_radius_s     = geometry_binary.calc_roche_radius(mass_ratio, 'secondary')
@@ -343,8 +372,6 @@ secondary_max_vel   = primary_max_vel * mass_ratio        # Orbital velocity sec
     return pars_add
 
 
-def prior_range_check():
-
 def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, single_walker=False):
     """
     Set the initial positions for the mcmc sampling
@@ -358,7 +385,7 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
     dir_previous_chain : string
         the directory to the previous chain
     single_walker : boolean
-        True if we calculate the postion for just one walker
+        True if we calculate the position for just one walker
 
     Returns
     =======
@@ -403,7 +430,7 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
 
                 pars_init[walker,parameters_id[param]] = walkers_list[walker][parameters_id[param]]
 
-    elif single_walker=False:
+    elif single_walker==False:
 
         pars_init = np.random.rand(n_walkers,n_par)
 
