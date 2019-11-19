@@ -109,7 +109,6 @@ class Jet_model(object):
         """
         Returns the unit vector of the vector.
         """
-        print(vector)
         vector_norm = np.linalg.norm(vector, axis=1)
         vector_norm_T = np.array([vector_norm]).T
         return vector / vector_norm_T
@@ -150,10 +149,10 @@ class Jet_model(object):
         """
 
         CO = origin_ray - jet_centre
-        a  = np.dot(self.ray, jet_orientation)**2 - np.cos(angle_jet)**2
-        b  = 2 * (np.dot(self.ray, jet_orientation) * np.dot(CO, jet_orientation)\
+        a  = np.dot(self.ray, self.jet_orientation)**2 - np.cos(angle_jet)**2
+        b  = 2 * (np.dot(self.ray, self.jet_orientation) * np.dot(CO, self.jet_orientation)\
             - np.dot(self.ray, CO) * np.cos(angle_jet)**2)
-        c  = np.dot(CO, jet_orientation)**2 - \
+        c  = np.dot(CO, self.jet_orientation)**2 - \
             np.dot(CO,CO) * np.cos(angle_jet)**2
 
         Discriminant = b**2 - 4 * a * c
@@ -220,7 +219,7 @@ class Jet_model(object):
             if jet_pos_exit[2] < 0:
                 # The jet intersects the south cone
 
-                if double_tilt==True:
+                if self.double_tilt==True:
 
                     check_south = True
 
@@ -268,7 +267,7 @@ class Jet_model(object):
                 jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
 
-        if check_south==True and double_tilt==True:
+        if check_south==True and self.double_tilt==True:
             # We check for intersection with the south lobe
             jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation*np.array([1.,1.,-1.]))
 
@@ -476,8 +475,8 @@ class Stellar_jet_simple(Jet):
                 jet_angle,
                 velocity_max,
                 velocity_edge,
-                jet_type,
                 power_density,
+                jet_type,
                 jet_centre=np.array([0, 0, 0]),
                 jet_orientation=np.array([0, 0, 1]),
                 jet_tilt=0,

@@ -47,7 +47,7 @@ def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
         ###### For each ray of light from a grid point on the post-AGB star,
         ###### we calculate the absorption by the jet
 
-        jet._set_gridpoints(coordAGB, gridpoints_LOS)
+        jet._set_gridpoints(coordAGB, pars['OTHER']['gridpoints_LOS'])
 
         if jet.gridpoints is None:
             ###### The ray does not pass through the jet
@@ -62,16 +62,16 @@ def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
 
             ###### The jet velocity and density
             scaling_par_od          = -10**pars_walker[pars['MODEL']['c_optical_depth']['id']] # The scaling parameter
-            optical_depth_ray       = np.zeros(len(wavelength_spectra)) # The scaled optical depth at each wavelength bin
+            optical_depth_ray       = np.zeros(len(wavelengths_spectra)) # The scaled optical depth at each wavelength bin
             jet_density_scaled      = jet.density(pars['OTHER']['gridpoints_LOS']) # The scaled number density of the jet
             jet_velocity            = jet.poloidal_velocity(pars['OTHER']['gridpoints_LOS'], pars['OTHER']['power_velocity']) # The velocity of the jet at each gridpoint (km/s)
             jet_radvel_km_per_s     = jet.radial_velocity(jet_velocity, pars_add['secondary_rad_vel']) # Radial velocity of each gridpoint (km/s)
+            jet_radvel_m_per_s      = jet_radvel_km_per_s * 1000 # Radial velocity of each gridpoint (m/s)
             jet_delta_gridpoints_AU = np.linalg.norm(jet.gridpoints[0,:] - jet.gridpoints[1,:]) # The length of each gridpoint (AU)
             jet_delta_gridpoints_m  = jet_delta_gridpoints_AU * AU  # The length of each gridpoint (m)
             # The shifted central wavelength of the line
             jet_wavelength_0_rv     = pars['OTHER']['wave_center'] * ( 1. + jet_radvel_m_per_s / constants.c )
 
-            # diff_wavelength = np.abs(jet_wavelength_0_rv - pars['OTHER']['wave_center'])
             indices_wavelengths   = [ np.abs(wave - wavelengths_spectra).argmin() for wave in jet_wavelength_0_rv]
             optical_depth_ray_LOS = jet_density_scaled * jet_delta_gridpoints_AU # The scaled optical depth for each gridpoint along the LOS
             np.add.at(optical_depth_ray, indices_wavelengths, optical_depth_ray_LOS)
@@ -147,14 +147,14 @@ def ln_likelihood(pars,
         jet.jet_centre = sec_pos
         if pars['OTHER']['tilt']==True:
 
-            jet.jet_orientation = jet._set_orientation(np.array([sec_vel]))
+            jet._set_orientation(np.array([sec_vel]))
 
         postAGB._set_grid()
         postAGB._set_grid_location()
 
         intensity = model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB)
 
-        for spectrum in spectra_observed[phase].keys():
+        for spectrum in data_spectra[phase].keys():
             ###### Iterate over all spectra with this phase
 
             sigma_squared                = standard_deviation[phase][spectrum]**2
@@ -166,7 +166,7 @@ def ln_likelihood(pars,
 
             chi_squared   += chi_squared_spectrum
             ln_likelihood += ln_likelihood_spectrum
-
+    # print('chi_squared=', chi_squared, 'ln_likelihood=', ln_likelihood)
     return chi_squared, ln_likelihood
 
 
@@ -198,7 +198,8 @@ def ln_probab(pars_walker,
 
     if np.isfinite(lp):
 
-        chi_squared, probability = lp + ln_likelihood(pars, pars_walker, pars_add, data_spectra, background_spectra, wavelengths_spectra, standard_deviation)
+        chi_squared, probability = ln_likelihood(pars, pars_walker, pars_add, data_spectra, background_spectra, wavelengths_spectra, standard_deviation)
+        probability += lp
 
         return probability
 

@@ -173,10 +173,10 @@ pool = MPIPool()
 if not pool.is_master():
     pool.wait()
     syst.exit(0)
-spectra_observed = {1: {'2': np.array([1,1,2,1])}}
-spectra_background = {1: {'2': np.array([2,2,2,2])}}
-spectra_wavelengths = {1: {'2': np.array([1,2,3,4])}}
-standard_deviation = {1: {'2': np.array([0.1,0.1,0.2,0.1])}}
+# spectra_observed = {1: {'2': np.array([1,1,2,1])}}
+# spectra_background = {1: {'2': np.array([2,2,2,2])}}
+# spectra_wavelengths = np.array([1,2,3,4])
+# standard_deviation = {1: {'2': np.array([0.1,0.1,0.2,0.1])}}
 
 sampler = emcee.EnsembleSampler(parameters['OTHER']['n_walkers'],
                                 len(parameters['MODEL'].keys()),
@@ -206,13 +206,13 @@ OutputDir = OutputDir+'_'+str(NewDirNumber)
 
 shutil.copyfile(InputDir+InputFile, OutputDir+'/'+InputFile)
 
-f = open(OutputDir+'/MCMC_chain_output.dat', 'a')
+f = open(OutputDir+'/MCMC_chain_output.dat', 'ab')
 f.close()
 
 ###### Run the mcmc chain ######################################################
 
 for result in sampler.sample(parameters_init, iterations=parameters['OTHER']['n_iter'], storechain=False):
     position = result[0]
-    f = open(OutputDir+'/MCMC_chain_output.dat', 'a')
+    f = open(OutputDir+'/MCMC_chain_output.dat', 'ab')
     np.savetxt(f, np.array(position))
     f.close()
