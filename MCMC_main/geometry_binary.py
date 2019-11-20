@@ -62,7 +62,7 @@ def disk_grid(radius_primary, inclination, number_of_gridpoints):
 
     return grid_primary
 
-def calc_roche_radius(q, which_star):
+def calc_roche_radius(q, which_star='primary'):
     """
     Calculates the Roche radius of star
 

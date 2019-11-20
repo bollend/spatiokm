@@ -13,6 +13,153 @@ from scipy import constants
 AU              = 1.496e+11     # 1AU in m
 
 
+def ln_probab(pars_walker,
+              pars,
+              data_spectra,
+              background_spectra,
+              wavelengths_spectra,
+              standard_deviation):
+    """
+        Calculates the probability of the model.
+
+    Parameters
+    ==========
+    pars : dictionary
+        All parameters
+    pars_walker : np.array
+        The model parameters of the walker
+    data_spectra : dictionary
+        The observed spectra ordered per phase
+    Returns
+    =======
+    probability : float
+        The probability of the model
+    """
+    pars_add = calc_additional_par(pars, pars_walker)
+
+    lp = ln_prior(pars_walker, pars, pars_add)
+
+    if np.isfinite(lp):
+
+        chi_squared, probability = ln_likelihood(pars, pars_walker, pars_add, data_spectra, background_spectra, wavelengths_spectra, standard_deviation)
+        probability += lp
+
+        return probability
+
+    return -np.inf
+
+def ln_likelihood(pars,
+                  pars_walker,
+                  pars_add,
+                  data_spectra,
+                  background_spectra,
+                  wavelengths_spectra,
+                  standard_deviation,
+                  return_intensity=False):
+    """
+        Calculates the likelihood function of the model.
+
+    Parameters
+    ==========
+    pars: dictionary
+        All parameters
+    pars_walker : np.array
+        The model parameters of the walker
+    pars_add : dictionary
+        The additional parameters that have to be calculated
+    data_spectra : dictionary
+        The observed spectra ordered per phase
+    background_spectra : dictionary
+        The background spectra ordered per phase
+    wavelengths_spectra : np.array
+        The wavelength array
+    standard_deviation : dictionary
+        The standard deviation ordered per phase
+    Returns
+    =======
+    chi_squared : float
+        The chi-squared of the model
+    Likelihood : float
+        The log likelihood of the model
+    model_spectra : dictionary
+        The model spectra
+    """
+    ###### Create the post-AGB star with a Fibonacci grid
+    postAGB = Star.Star(pars_walker[pars['MODEL']['primary_radius']['id']],
+                        np.array([0,0,0]),
+                        pars_walker[pars['MODEL']['inclination']['id']],
+                        pars['OTHER']['gridpoints_primary'])
+
+    ###### Create the jet
+    jet = create_jet.create_jet(pars['OTHER']['jet_type'], pars, pars_walker)
+
+    ###### create the binary orbit
+    primary_orbit   = {}
+    secondary_orbit = {}
+
+    chi_squared   = 0
+    ln_likelihood = 0
+
+    if return_intensity==True:
+
+        model_spectra = {}
+
+    for phase in data_spectra.keys():
+    ###### iterate over each orbital phase
+
+        prim_pos, sec_pos, prim_vel, sec_vel = geometry_binary.pos_vel_primary_secondary(
+                                           phase,
+                                           pars['BINARY']['period'],
+                                           pars['BINARY']['omega'],
+                                           pars['BINARY']['ecc'],
+                                           pars_add['primary_sma_AU'],
+                                           pars_add['secondary_sma_AU'],
+                                           pars['BINARY']['T_inf'],
+                                           pars['BINARY']['T0'])
+
+
+        postAGB.centre = prim_pos
+        jet.jet_centre = sec_pos
+        if pars['OTHER']['tilt']==True:
+
+            jet._set_orientation(np.array([sec_vel]))
+            
+        postAGB._set_grid()
+        postAGB._set_grid_location()
+
+        intensity = model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB)
+
+        if return_intensity==True:
+
+            model_spectra[phase] = {}
+
+        for spectrum in data_spectra[phase].keys():
+            ###### Iterate over all spectra with this phase
+
+            sigma_squared                = standard_deviation[phase][spectrum]**2
+            model_spectrum               = background_spectra[phase][spectrum] * intensity
+            chi_squared_spectrum_array   = (data_spectra[phase][spectrum] - model_spectrum)**2 / sigma_squared
+            ln_likelihood_spectrum_array = -0.5 * (chi_squared_spectrum_array + np.log(2. * np.pi * sigma_squared))
+            chi_squared_spectrum         = np.sum(chi_squared_spectrum_array)
+            ln_likelihood_spectrum       = np.sum(ln_likelihood_spectrum_array)
+
+            chi_squared   += chi_squared_spectrum
+            ln_likelihood += ln_likelihood_spectrum
+
+            if return_intensity==True:
+
+                model_spectra[phase][spectrum] = model_spectrum
+
+    if return_intensity==True:
+
+        return chi_squared, ln_likelihood, model_spectra
+
+    else:
+
+        return chi_squared, ln_likelihood
+
+
+
 def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
     """
         Calculates the amount of absorption of the light that travels through
@@ -59,7 +206,6 @@ def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
 
             jet._set_gridpoints_unit_vector()
             jet._set_gridpoints_polar_angle()
-
             ###### The jet velocity and density
             scaling_par_od          = -10**pars_walker[pars['MODEL']['c_optical_depth']['id']] # The scaling parameter
             optical_depth_ray       = np.zeros(len(wavelengths_spectra)) # The scaled optical depth at each wavelength bin
@@ -81,131 +227,6 @@ def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
         intensity += intensity_pointAGB
 
     return intensity
-
-def ln_likelihood(pars,
-                  pars_walker,
-                  pars_add,
-                  data_spectra,
-                  background_spectra,
-                  wavelengths_spectra,
-                  standard_deviation):
-    """
-        Calculates the likelihood function of the model.
-
-    Parameters
-    ==========
-    pars: dictionary
-        All parameters
-    pars_walker : np.array
-        The model parameters of the walker
-    pars_add : dictionary
-        The additional parameters that have to be calculated
-    data_spectra : dictionary
-        The observed spectra ordered per phase
-    background_spectra : dictionary
-        The background spectra ordered per phase
-    wavelengths_spectra : np.array
-        The wavelength array
-    standard_deviation : dictionary
-        The standard deviation ordered per phase
-    Returns
-    =======
-    Likelihood : float
-        The log likelihood of the model
-    """
-    ###### Create the post-AGB star with a Fibonacci grid
-    postAGB = Star.Star(pars_walker[pars['MODEL']['primary_radius']['id']],
-                        np.array([0,0,0]),
-                        pars_walker[pars['MODEL']['inclination']['id']],
-                        pars['OTHER']['gridpoints_primary'])
-
-    ###### Create the jet
-    jet = create_jet.create_jet(pars['OTHER']['jet_type'], pars, pars_walker)
-
-    ###### create the binary orbit
-    primary_orbit   = {}
-    secondary_orbit = {}
-
-    chi_squared   = 0
-    ln_likelihood = 0
-
-    for phase in data_spectra.keys():
-    ###### iterate over each orbital phase
-
-        prim_pos, sec_pos, prim_vel, sec_vel = geometry_binary.pos_vel_primary_secondary(
-                                           phase,
-                                           pars['BINARY']['period'],
-                                           pars['BINARY']['omega'],
-                                           pars['BINARY']['ecc'],
-                                           pars_add['primary_sma_AU'],
-                                           pars_add['secondary_sma_AU'],
-                                           pars['BINARY']['T_inf'],
-                                           pars['BINARY']['T0'])
-
-
-        postAGB.centre = prim_pos
-        jet.jet_centre = sec_pos
-        if pars['OTHER']['tilt']==True:
-
-            jet._set_orientation(np.array([sec_vel]))
-
-        postAGB._set_grid()
-        postAGB._set_grid_location()
-
-        intensity = model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB)
-
-        for spectrum in data_spectra[phase].keys():
-            ###### Iterate over all spectra with this phase
-
-            sigma_squared                = standard_deviation[phase][spectrum]**2
-            model_spectrum               = background_spectra[phase][spectrum] * intensity
-            chi_squared_spectrum_array   = (data_spectra[phase][spectrum] - model_spectrum)**2 / sigma_squared
-            ln_likelihood_spectrum_array = -0.5 * (chi_squared_spectrum_array + np.log(2. * np.pi * sigma_squared))
-            chi_squared_spectrum         = np.sum(chi_squared_spectrum_array)
-            ln_likelihood_spectrum       = np.sum(ln_likelihood_spectrum_array)
-
-            chi_squared   += chi_squared_spectrum
-            ln_likelihood += ln_likelihood_spectrum
-    # print('chi_squared=', chi_squared, 'ln_likelihood=', ln_likelihood)
-    return chi_squared, ln_likelihood
-
-
-def ln_probab(pars_walker,
-              pars,
-              data_spectra,
-              background_spectra,
-              wavelengths_spectra,
-              standard_deviation):
-    """
-        Calculates the probability of the model.
-
-    Parameters
-    ==========
-    pars : dictionary
-        All parameters
-    pars_walker : np.array
-        The model parameters of the walker
-    data_spectra : dictionary
-        The observed spectra ordered per phase
-    Returns
-    =======
-    probability : float
-        The probability of the model
-    """
-    pars_add = calc_additional_par(pars, pars_walker)
-
-    lp = ln_prior(pars_walker, pars, pars_add)
-
-    if np.isfinite(lp):
-
-        chi_squared, probability = ln_likelihood(pars, pars_walker, pars_add, data_spectra, background_spectra, wavelengths_spectra, standard_deviation)
-        probability += lp
-
-        return probability
-
-    return -np.inf
-
-# def ymodel(data_nus, z, dictkey_arrays, dict_modelfluxes, *par):
 
 def ln_prior(pars_walker, pars, pars_add):
     """
@@ -238,7 +259,7 @@ def ln_prior(pars_walker, pars, pars_add):
 
     ###### Primary radius and jet velocity
     if not (pars_walker[radius_id] < jet_height_above_star
-            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.7 * pars_add['roche_radius_primary']
+            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.85 * pars_add['roche_radius_primary_AU']
             and pars_walker[v_edge_id] < pars_walker[v_max_id]
     ):
 
@@ -292,7 +313,7 @@ def ln_prior(pars_walker, pars, pars_add):
         ###### outer radius of the disk is smaller than the roche radius of the companion
         if pars['OTHER']['jet_type']=='sdisk_wind' or pars['OTHER']['jet_type']=='sdisk_wind_strict':
 
-            if not (2.*pars_add['secondary_radius'] < pars_add['disk_radius_in'] < pars_add['disk_radius_out'] < pars_add['roche_radius_s']
+            if not (2.*pars_add['secondary_radius'] < pars_add['disk_radius_in'] < pars_add['disk_radius_out'] < pars_add['roche_radius_s_AU']
             ):
 
                 probability = -np.inf
@@ -319,27 +340,27 @@ def calc_additional_par(pars, pars_walker):
     """
     pars_add = {}
 
-    incl_id              = pars['MODEL']['inclination']['id']
+    incl_id                 = pars['MODEL']['inclination']['id']
 
-    secondary_mass       = geometry_binary.calc_mass_sec(pars['BINARY']['primary_mass'],
+    secondary_mass          = geometry_binary.calc_mass_sec(pars['BINARY']['primary_mass'],
                                                 pars_walker[incl_id],
                                                 pars['BINARY']['mass_function'])
 
-    mass_ratio           = pars['BINARY']['primary_mass'] / secondary_mass
+    mass_ratio              = pars['BINARY']['primary_mass'] / secondary_mass
 
-    primary_sma_AU       = pars['BINARY']['primary_asini'] / pars_walker[incl_id]
-    secondary_sma_AU     = mass_ratio * primary_sma_AU
-    roche_radius_primary = geometry_binary.calc_roche_radius(mass_ratio, 'primary')
-
-    primary_orb_vel      = pars['BINARY']['primary_rad_vel'] / pars_walker[incl_id]
-    secondary_orb_vel    = primary_orb_vel * mass_ratio
-    secondary_rad_vel    = pars['BINARY']['primary_rad_vel'] * mass_ratio
+    primary_sma_AU          = pars['BINARY']['primary_asini'] / pars_walker[incl_id]
+    secondary_sma_AU        = mass_ratio * primary_sma_AU
+    roche_radius_primary    = geometry_binary.calc_roche_radius(mass_ratio, 'primary')
+    roche_radius_primary_AU = roche_radius_primary * primary_sma_AU
+    primary_orb_vel         = pars['BINARY']['primary_rad_vel'] / pars_walker[incl_id]
+    secondary_orb_vel       = primary_orb_vel * mass_ratio
+    secondary_rad_vel       = pars['BINARY']['primary_rad_vel'] * mass_ratio
 
     pars_add = {'primary_sma_AU': primary_sma_AU,
                       'secondary_sma_AU' : secondary_sma_AU,
                       'secondary_mass': secondary_mass,
                       'mass_ratio':mass_ratio,
-                      'roche_radius_primary':roche_radius_primary,
+                      'roche_radius_primary_AU':roche_radius_primary_AU,
                       'primary_orb_vel':primary_orb_vel,
                       'secondary_orb_vel':secondary_orb_vel,
                       'secondary_rad_vel':secondary_rad_vel}
@@ -357,6 +378,7 @@ def calc_additional_par(pars, pars_walker):
         v_in               = v_M * np.tan(pars_walker[jet_angle_inner_id])
         secondary_radius   = 1.01*mass_sec**0.724 * R_sun / AU
         roche_radius_s     = geometry_binary.calc_roche_radius(mass_ratio, 'secondary')
+        roche_radius_s_AU  = roche_radius_s * primary_sma_AU
         disk_radius_out    = G * secondary_mass * M_sun \
                           * (1000*pars_walker[velocity_edge_id])**-2 * AU**-1
         disk_radius_in     = G * secondary_mass * M_sun \
@@ -364,7 +386,7 @@ def calc_additional_par(pars, pars_walker):
         parameters_extra = {'v_M': v_M,
                             'v_in': v_in,
                             'secondary_radius': secondary_radius,
-                            'roche_radius_s': roche_radius_s,
+                            'roche_radius_s_AU': roche_radius_s_AU,
                             'disk_radius_out': disk_radius_out,
                             'disk_radius_in': disk_radius_in
                             }

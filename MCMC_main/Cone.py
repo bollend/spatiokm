@@ -70,10 +70,6 @@ class Jet_model(object):
         self.jet_tilt                = jet_tilt
         self.double_tilt             = double_tilt
         self.south_tilt_intersection = False
-        # if self.jet_type == 'disk_wind':
-        #     self.jet_centre == jet_centre - z_h
-        # else:
-        #     self.jet_source_point == self.jet_source_point
 
     @property
     def jet_angle(self):
@@ -128,8 +124,8 @@ class Jet_model(object):
             v2_u = v2
         return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
-    def entry_exit_ray_cone(self, origin_ray, angle_jet, jet_centre, jet_orientation=np.array([0,0,1])):
-        """
+    def entry_exit_ray_cone(self, origin_ray, angle_jet, jet_centre, orientation=np.array([0,0,1])):
+        """(origin_ray, angle_jet, jet_centre, self.jet_orientation)
         Calculate the discriminant of the second order equation for the intersection
         of a ray and a cone
 
@@ -423,6 +419,7 @@ class Jet(Jet_model):
                                             self.jet_orientation, unit=True)
                 self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]\
                         = np.pi - self.polar_angle_gridpoints[np.where(self.polar_angle_gridpoints > 0.5 * np.pi)]
+
             else:
 
                 self.polar_angle_gridpoints = self.angle_between_vectors(self.gridpoints_unit_vector,\
@@ -442,7 +439,8 @@ class Jet(Jet_model):
         v = self.unit_vector(travel_direction)
         r = np.cross(a,v)
 
-        self.orientation = a * np.cos(self.jet_tilt) + np.cross(r,a) * np.sin(self.jet_tilt) + r * np.dot(r,a) * (1 - np.cos(self.jet_tilt))
+        self.jet_orientation = a * np.cos(-1*self.jet_tilt) + np.cross(r,a) * np.sin(-1*self.jet_tilt) + r * np.dot(r,a) * (1 - np.cos(-1*self.jet_tilt))
+        self.jet_orientation = self.jet_orientation.flatten()
 
     def radial_velocity(self, velocities, radvel_secondary):
         """

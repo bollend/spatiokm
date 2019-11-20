@@ -1,0 +1,68 @@
+PARAMETER           VALUE              Type       DIMENSIONS
+------------------------------------------------------------
+GROUP               MODEL
+inclination                                   radians
+min               0.698               FLOAT   40.
+max               1.553               FLOAT   89.
+jet_angle                                     radians
+min               0.523               FLOAT   30.
+max               1.483               FLOAT   85.
+jet_cavity_angle                              radians
+min               0.                  FLOAT   0.
+max               0.785               FLOAT   45.
+jet_tilt                                      radians
+min               0.                  FLOAT   0.
+max               0.174               FLOAT   10.
+velocity_max                                  km/s
+min               400.                FLOAT
+max               1500.               FLOAT
+velocity_edge                                 km/s
+min               0.1                 FLOAT
+max               200.                FLOAT
+exp_velocity
+min               -10.                FLOAT
+max               10.                 FLOAT
+power_density
+min               0.                  FLOAT
+max               15                  FLOAT
+c_optical_depth
+min               0.                  FLOAT
+max               10.                 FLOAT
+primary_radius                                  AU
+min               0                   FLOAT
+max               5                   FLOAT
+GROUP               BINARY
+period              140.82            FLOAT          days
+T0                  2455233.9         FLOAT         BJD
+omega               95.8              FLOAT           degrees
+mass_function       0.195             FLOAT           M_sol
+ecc                 0.085             FLOAT
+primary_asini       0.3074            FLOAT            AU
+gamma               -98.13            FLOAT            km s^-1
+primary_rad_vel     23.8              FLOAT           km s^-1
+primary_mass        0.6               FLOAT           M_sol
+primary_sma         1.                FLOAT           R_p
+GROUP               OTHER
+jet_type            stellar_jet       STRING
+object_id           BD+46_442         STRING
+gridpoints_LOS      201               INT
+gridpoints_primary  50                INT
+n_walkers           128               INT
+n_iter              5000              INT
+synthetic           transposed.txt    STRING
+power_velocity      2                 INT
+wave_center         6562.82           FLOAT
+wave_begin          6547.5            FLOAT
+wave_end            6567.             FLOAT
+wavelength_bins     801               INT
+velocity_range      2000.             FLOAT
+photospheric        0                 INT
+template            0                 INT
+previous_walkers    False             BOOL
+uncertainty_back    False             BOOL
+cut_waveregion      True              BOOL
+dir_previous_chain  False             BOOL
+tilt                True              BOOL
+double_tilt         False             BOOL
+FINISH
+GROUP               BESTFIT

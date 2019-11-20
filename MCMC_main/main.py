@@ -64,7 +64,7 @@ InputDir   = '../input_data/'+object_id+'/'
 InputFile = datafile
 
 ###### Create the parameter dictionary with all jet, binary, and model parameters
-parameters = parameters_DICT.create_parameters(InputDir+InputFile)
+parameters = parameters_DICT.read_parameters(InputDir+InputFile)
 parameters['BINARY']['T_inf'] = geometry_binary.T0_to_IC(parameters['BINARY']['omega'],
                                                          parameters['BINARY']['ecc'],
                                                          parameters['BINARY']['period'],
@@ -182,7 +182,8 @@ sampler = emcee.EnsembleSampler(parameters['OTHER']['n_walkers'],
                                 len(parameters['MODEL'].keys()),
                                 MCMC.ln_probab,
                                 args=(parameters,spectra_observed, spectra_background, spectra_wavelengths, standard_deviation),
-                                pool=pool)
+                                pool=pool,
+                                a=8)
 
 ###### create the output file for the chain ####################################
 
