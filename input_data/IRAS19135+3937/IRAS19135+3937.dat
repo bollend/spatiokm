@@ -2,7 +2,7 @@ PARAMETER           VALUE              Type       DIMENSIONS
 ------------------------------------------------------------
 GROUP               MODEL
 inclination                                   radians
-min               0.698               FLOAT   40.
+min               0.872               FLOAT   50.
 max               1.553               FLOAT   89.
 jet_angle                                     radians
 min               0.523               FLOAT   30.
@@ -15,12 +15,12 @@ min               0.                  FLOAT   0.
 max               0.174               FLOAT   10.
 velocity_max                                  km/s
 min               400.                FLOAT
-max               1500.               FLOAT
+max               1400.               FLOAT
 velocity_edge                                 km/s
 min               0.1                 FLOAT
-max               200.                FLOAT
+max               150.                FLOAT
 exp_velocity
-min               -10.                FLOAT
+min               -2.                FLOAT
 max               10.                 FLOAT
 power_density
 min               0.                  FLOAT
@@ -30,7 +30,7 @@ min               0.                  FLOAT
 max               10.                 FLOAT
 primary_radius                                  AU
 min               0                   FLOAT
-max               5                   FLOAT
+max               2                   FLOAT
 GROUP               BINARY
 period              127.08            FLOAT     days
 T0                  2454997.8         FLOAT     BJD
@@ -45,8 +45,8 @@ primary_sma         1.                FLOAT     R_p
 GROUP               OTHER
 jet_type            stellar_jet       STRING
 object_id           IRAS19135+3937    STRING
-gridpoints_LOS      201               INT
-gridpoints_primary  50                INT
+gridpoints_LOS      2001               INT
+gridpoints_primary  100                INT
 n_walkers           128               INT
 n_iter              5000              INT
 synthetic           06250_g+1.0_m10p00_hr_vsini10.txt    STRING

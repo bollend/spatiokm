@@ -18,7 +18,7 @@ min               400.                FLOAT
 max               1500.               FLOAT
 velocity_edge                                 km/s
 min               0.1                 FLOAT
-max               200.                FLOAT
+max               70.                FLOAT
 exp_velocity
 min               -2.                FLOAT
 max               10.                 FLOAT
@@ -66,16 +66,16 @@ tilt                True              BOOL
 double_tilt         False             BOOL
 FINISH
 GROUP               BESTFIT
-inclination         1.05             FLOAT           radians
-jet_angle           0.73             FLOAT           radians
-jet_cavity_angle    0.33             FLOAT           radians
-jet_tilt            0.063             FLOAT           radians
-velocity_max        951               FLOAT           km/s
-velocity_edge       136              FLOAT           km/s
-exp_velocity        7.25              FLOAT
-power_density       8.2               FLOAT
-c_optical_depth     6.05      FLOAT
-primary_radius      0.12              FLOAT            AU
+inclination         60             FLOAT           radians
+jet_angle           41.5             FLOAT           radians
+jet_cavity_angle    17.82             FLOAT           radians
+jet_tilt            3.71             FLOAT           radians
+velocity_max        895               FLOAT           km/s
+velocity_edge       139              FLOAT           km/s
+exp_velocity        8              FLOAT
+power_density       7.9               FLOAT
+c_optical_depth     5.9      FLOAT
+primary_radius      0.13              FLOAT            AU
 FINISHMODEL
 inclination         1.05             FLOAT           radians
 jet_angle           0.73              FLOAT           radians

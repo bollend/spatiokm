@@ -123,7 +123,7 @@ def ln_likelihood(pars,
         if pars['OTHER']['tilt']==True:
 
             jet._set_orientation(np.array([sec_vel]))
-            
+
         postAGB._set_grid()
         postAGB._set_grid_location()
 
@@ -259,7 +259,7 @@ def ln_prior(pars_walker, pars, pars_add):
 
     ###### Primary radius and jet velocity
     if not (pars_walker[radius_id] < jet_height_above_star
-            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.85 * pars_add['roche_radius_primary_AU']
+            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.725 * pars_add['roche_radius_primary_AU']
             and pars_walker[v_edge_id] < pars_walker[v_max_id]
     ):
 

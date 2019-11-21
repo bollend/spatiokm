@@ -2,7 +2,7 @@
 create the parameter dictionary
 '''
 import eval_type
-import numpy
+import numpy as np
 
 def read_parameters(inputfile):
     with open(inputfile) as f:
@@ -70,7 +70,18 @@ def read_model_parameters(inputfile):
 
         if group=='BESTFIT':
 
-            parameters[split_lines[0]] = eval_type.evaluate(split_lines[1], split_lines[2])
+            if (split_lines[0]=='inclination'
+                or split_lines[0]=='jet_angle'
+                or split_lines[0]=='jet_cavity_angle'
+                or split_lines[0]=='jet_tilt'
+                or split_lines[0]=='jet_angle_inner'
+                ):
+
+                parameters[split_lines[0]] = np.pi/180.*eval_type.evaluate(split_lines[1], split_lines[2])
+
+            else:
+
+                parameters[split_lines[0]] = eval_type.evaluate(split_lines[1], split_lines[2])
 
         elif split_lines[0]=='GROUP':
 
