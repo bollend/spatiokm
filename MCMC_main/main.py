@@ -1,6 +1,6 @@
 import sys
-sys.path.append('/lhome/dylanb/astronomy/MCMC_main/MCMC_main')
-sys.path.append('/lhome/dylanb/astronomy/MCMC_main/MCMC_main/tools')
+# sys.path.append('/lhome/dylanb/astronomy/MCMC_main/MCMC_main')
+sys.path.append('./tools')
 import os
 import shutil
 import argparse
@@ -209,6 +209,18 @@ shutil.copyfile(InputDir+InputFile, OutputDir+'/'+InputFile)
 
 f = open(OutputDir+'/MCMC_chain_output.dat', 'ab')
 f.close()
+
+###### create the parameter id file
+parameter_id = {}
+with open(OutputDir+'/parameter_id.dat','a') as f:
+    f.close()
+
+for param in parameters['MODEL'].keys():
+
+    with open(OutputDir+'/parameter_id.dat','a') as f:
+
+        f.write('%s\t%s\n' % (str(param), str(parameters['MODEL'][param]['id'])))
+
 
 ###### Run the mcmc chain ######################################################
 

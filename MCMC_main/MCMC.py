@@ -259,7 +259,7 @@ def ln_prior(pars_walker, pars, pars_add):
 
     ###### Primary radius and jet velocity
     if not (pars_walker[radius_id] < jet_height_above_star
-            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.725 * pars_add['roche_radius_primary_AU']
+            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.85 * pars_add['roche_radius_primary_AU']
             and pars_walker[v_edge_id] < pars_walker[v_max_id]
     ):
 
@@ -426,7 +426,7 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
         OutputDirPrevious = '../MCMC_output/'+pars['OTHER']['object_id']+'/results_'+pars['OTHER']['jet_type']+'/'+dir_previous_chain
 
         ###### Load the parameter id
-        parameter_id = {}
+        parameters_id = {}
         with open(OutputDirPrevious+'/parameter_id.dat','r') as f:
             lines = f.readlines()
 
@@ -438,7 +438,7 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
             parameters_id[par] = par_id
 
         ###### Load the previous walkers
-        with open(OutputDirPrevious+'/MCMC_chain_'+pars['OTHER']['jet_type']+'.dat', 'r') as chain_file:
+        with open(OutputDirPrevious+'/MCMC_chain_output.dat', 'r') as chain_file:
             walkers_lines = chain_file.readlines()[-n_walkers:]
 
         ###### create the chain array and add the parameter id
@@ -449,7 +449,7 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
 
             pars['MODEL'][param]['id'] = parameters_id[param]
 
-            for walker in n_walkers:
+            for walker in range(n_walkers):
 
                 pars_init[walker,parameters_id[param]] = walkers_list[walker][parameters_id[param]]
 

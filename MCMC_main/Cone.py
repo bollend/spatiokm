@@ -597,8 +597,9 @@ class Stellar_jet(Jet):
 
             density = np.zeros(number_of_gridpoints)
             indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
-            density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
-                                * self.gridpoints[indices,2]**-2
+            density[indices] = \
+                        (self.polar_angle_gridpoints[indices]/self.jet_angle)**self.power_density \
+                        * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
 
         else:
 
@@ -681,9 +682,10 @@ class X_wind(Jet):
         if self.south_tilt_intersection==False:
 
             density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
-                                * self.gridpoints[indices_in,2]**-2
+                                * np.dot(self.gridpoints[indices_in,:] - self.jet_centre, self.jet_orientation)**-2
+
             density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                                * self.gridpoints[indices_out,2]**-2
+                                * np.dot(self.gridpoints[indices_out,:] - self.jet_centre, self.jet_orientation)**-2
 
         else:
 
@@ -762,7 +764,7 @@ class X_wind_strict(Jet):
         if self.south_tilt_intersection==False:
 
             density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_angle)**self.power_density \
-                                * self.gridpoints[indices,2]**-2
+                                * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
 
         else:
 
@@ -1071,9 +1073,9 @@ class Sdisk_wind(Disk_wind):
         indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
 
         density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
-                            * self.gridpoints[indices_in,2]**-2
+                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
         density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                            * self.gridpoints[indices_out,2]**-2
+                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
 
         return density
 
@@ -1139,6 +1141,6 @@ class Sdisk_wind_strict(Disk_wind):
         indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
 
         density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_cavity_angle)**self.power_density \
-                            * self.gridpoints[indices,2]**-2
+                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
 
         return density
