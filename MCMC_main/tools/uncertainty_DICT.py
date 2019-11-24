@@ -29,7 +29,7 @@ def create_uncertainties(object_id, parameters, InputDir, phases_dict):
 
             standard_deviation[phase] = {}
 
-            for spectrum in uncertainty_background[ph]:
+            for spectrum in uncertainty_background[phase]:
 
                 standard_deviation[phase][spectrum] = \
                             2./signal_to_noise[spectrum] + uncertainty_background[phase][spectrum]
