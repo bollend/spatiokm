@@ -12,7 +12,7 @@ from astropy import units as u
 import parameters_DICT
 import uncertainty_DICT
 import emcee
-from emcee.utils import MPIPool
+from schwimmbad import MPIPool
 import MCMC
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -151,7 +151,7 @@ Main MCMC sampling
 ###### Set the initial positions of the walkers ################################
 parameters, parameters_init = \
             MCMC.mcmc_initial_positions(parameters,
-                                  prev_chain=parameters['OTHER']['previous_walkers'],
+                                  prev_chain=parameters['OTHER']['previous_chain'],
                                   dir_previous_chain=parameters['OTHER']['dir_previous_chain'])
 
 ###### Check if the priors are in the accepted range ###########################
@@ -162,8 +162,6 @@ for walker in range(parameters['OTHER']['n_walkers']):
     while MCMC.ln_prior(parameters_init[walker,:], parameters, parameters_add) == -np.inf:
 
         pars, parameters_init[walker,:] = MCMC.mcmc_initial_positions(parameters,
-                                      prev_chain=parameters['OTHER']['previous_walkers'],
-                                      dir_previous_chain=parameters['OTHER']['dir_previous_chain'],
                                       single_walker=True)
         parameters_add = MCMC.calc_additional_par(parameters, parameters_init[walker,:])
 
@@ -224,7 +222,7 @@ for param in parameters['MODEL'].keys():
 
 ###### Run the mcmc chain ######################################################
 
-for result in sampler.sample(parameters_init, iterations=parameters['OTHER']['n_iter'], storechain=False):
+for result in sampler.sample(parameters_init, iterations=parameters['OTHER']['n_iter'], store=False):
     position = result[0]
     f = open(OutputDir+'/MCMC_chain_output.dat', 'ab')
     np.savetxt(f, np.array(position))

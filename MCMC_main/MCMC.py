@@ -3,8 +3,6 @@ import sys
 import os, glob
 import pickle
 from scipy import constants
-import emcee
-from emcee.utils import MPIPool
 import geometry_binary
 import Star
 import Cone
@@ -417,7 +415,6 @@ def mcmc_initial_positions(pars, prev_chain=False, dir_previous_chain=None, sing
     pars_init : np.array
         The initial positions of the parameters
     """
-
     n_par     = len(pars['MODEL'].keys())
     n_walkers = int(pars['OTHER']['n_walkers'])
 
