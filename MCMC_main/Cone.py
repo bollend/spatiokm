@@ -791,8 +791,7 @@ class Disk_wind(Jet):
                 jet_orientation=np.array([0, 0, 1]),
                 jet_tilt=0,
                 double_tilt=False,
-                jet_cavity_angle=0,
-                centre_shift=None):
+                jet_cavity_angle=0):
 
         super().__init__(inclination,
                         jet_angle,
@@ -804,10 +803,40 @@ class Disk_wind(Jet):
                         jet_tilt,
                         double_tilt)
 
-        self.centre_shift             = centre_shift
         self.jet_cavity_angle         = jet_cavity_angle
-        self.jet_centre_outflow_north = self.jet_centre - self.centre_shift
-        self.jet_centre_outflow_south = self.jet_centre + self.centre_shift
+
+    def _set_orientation(self, travel_direction):
+        """
+        Sets the orientation of the jet axis
+        """
+        a = np.array([0,0,1])
+        v = self.unit_vector(travel_direction)
+        r = np.cross(a,v)
+
+        self.jet_orientation = a * np.cos(-1*self.jet_tilt) + np.cross(r,a) * np.sin(-1*self.jet_tilt) + r * np.dot(r,a) * (1 - np.cos(-1*self.jet_tilt))
+        self.jet_orientation = self.jet_orientation.flatten()
+
+    def _set_centre_shift(self, disk_radius):
+        """
+        Sets the shifted centre of the disk wind
+        """
+        self.centre_shift = disk_radius/np.tan(self.jet_angle)
+
+        if self.jet_tilt==False:
+
+            self.centre_shift = disk_radius/np.tan(self.jet_angle)
+            self.jet_centre_outflow_north = self.jet_centre[2] - self.centre_shift
+            self.jet_centre_outflow_south = self.jet_centre[2] + self.centre_shift
+
+        elif self.double_tilt==False:
+
+            self.jet_centre_outflow_north = self.jet_centre - self.centre_shift * self.jet_orientation
+            self.jet_centre_outflow_south = self.jet_centre + self.centre_shift * self.jet_orientation
+
+        elif self.double_tilt==True:
+
+            self.jet_centre_outflow_north = self.jet_centre - self.centre_shift * self.jet_orientation
+            self.jet_centre_outflow_south = self.jet_centre - np.array([1,1,-1]) * self.centre_shift * self.jet_orientation
 
     def _set_gridpoints(self, origin_ray, number_of_gridpoints):
 
@@ -908,7 +937,7 @@ class Disk_wind(Jet):
                                         jet_entry_par + 5., number_of_gridpoints)
                 self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
 
-        elif (jet_entry_par_north is None and jet_entry_par_south is notNone)\
+        elif (jet_entry_par_north is None and jet_entry_par_south is not None)\
                or\
              (jet_entry_par_north < 0 and jet_entry_par_south is not None):
             # The ray only intersects the south lobe or the ray intersects both
@@ -1015,8 +1044,7 @@ class Sdisk_wind(Disk_wind):
                 jet_tilt=0,
                 double_tilt=False,
                 jet_cavity_angle=0,
-                jet_angle_inner=None,
-                centre_shift=None):
+                jet_angle_inner=None):
 
         super().__init__(inclination,
                         jet_angle,
@@ -1027,8 +1055,7 @@ class Sdisk_wind(Disk_wind):
                         jet_orientation,
                         jet_tilt,
                         double_tilt,
-                        jet_cavity_angle,
-                        centre_shift)
+                        jet_cavity_angle)
 
         self.jet_centre_outflow = self.jet_centre - self.centre_shift
         self.jet_angle_inner    = jet_angle_inner
@@ -1077,6 +1104,26 @@ class Sdisk_wind(Disk_wind):
         density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
                             * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
 
+    density     = np.zeros(number_of_gridpoints)
+    indices_in  = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
+    indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
+
+    if self.south_tilt_intersection==False:
+
+        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
+                            * np.dot(self.gridpoints[indices_in,:] - self.jet_centre, self.jet_orientation)**-2
+
+        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
+                            * np.dot(self.gridpoints[indices_out,:] - self.jet_centre, self.jet_orientation)**-2
+
+    else:
+
+        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
+                            * np.dot(self.gridpoints[indices_in,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
+        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
+                            * np.dot(self.gridpoints[indices_out,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
+
+    return density
         return density
 
 class Sdisk_wind_strict(Disk_wind):
