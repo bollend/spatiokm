@@ -846,14 +846,15 @@ class Disk_wind(Jet):
                                     self.jet_centre,
                                     number_of_gridpoints)
 
-    def _set_gridpoints_unit_vector(self, number_of_gridpoints):
+    def _set_gridpoints_unit_vector(self):
         """
         Sets the unit vector for the vector from the jet centre to the gridpoints.
         The centre shift is applied when the centre of the cone is not located
         at the jet centre, i.e., for a disk wind.
         """
         if self.gridpoints is not None:
-
+            
+            number_of_gridpoints = len(self.gridpoints[:,0])
             indices_north            = np.where(self.gridpoints[:,2] > 0)
             indices_south            = np.where(self.gridpoints[:,2] < 0)
             self.gridpoints_unit_vector = np.zeros((number_of_gridpoints, 3))
