@@ -901,15 +901,32 @@ class Disk_wind(Jet):
         jet_entry_par_south, jet_exit_par_south = \
                         self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_south)
 
-        if (jet_entry_par_north is None and jet_entry_par_south is None)\
-              or\
-           (jet_entry_par_north < 0 and jet_entry_par_south < 0):
+        if jet_entry_par_north is None:
+
+            jet_entry_par_north_num = 0
+        else:
+
+            jet_entry_par_north_num = jet_entry_par_north
+
+        if jet_entry_par_south is None:
+
+            jet_entry_par_south_num = 0
+
+        else:
+
+            jet_entry_par_south_num = jet_entry_par_south
+
+        if (jet_entry_par_north is None and jet_entry_par_south is None):
             # The ray does not intersect the north or south lobe
             jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
-        elif (jet_entry_par_north is not None and jet_entry_par_south is None)\
+        elif (jet_entry_par_north_num < 0 and jet_entry_par_south_num < 0):
+            # The ray does not intersect the north or south lobe
+            jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        if (jet_entry_par_north is not None and jet_entry_par_south is None)\
                 or\
-             (jet_entry_par_north is not None and jet_entry_par_south < 0):
+             (jet_entry_par_north is not None and jet_entry_par_south_num < 0):
             # The ray only intersects the north lobe or the ray intersects both
             # lobes, but the south lobe in the wrong direction
 
@@ -940,7 +957,7 @@ class Disk_wind(Jet):
 
         elif (jet_entry_par_north is None and jet_entry_par_south is not None)\
                or\
-             (jet_entry_par_north < 0 and jet_entry_par_south is not None):
+             (jet_entry_par_north_num < 0 and jet_entry_par_south is not None):
             # The ray only intersects the south lobe or the ray intersects both
             # lobes, but the north lobe in the wrong direction
 
@@ -969,7 +986,7 @@ class Disk_wind(Jet):
                                         jet_entry_par + 5., number_of_gridpoints)
                 self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
 
-        elif jet_entry_par_north > 0 and jet_exit_par_south > 0:
+        elif jet_entry_par_north_num > 0 and jet_exit_par_south_num > 0:
             # The ray intersects both lobes in the right direction
 
             if jet_entry_par_north < jet_entry_par_south:
@@ -994,7 +1011,7 @@ class Disk_wind(Jet):
                                             jet_entry_par + 5., number_of_gridpoints)
                     self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
 
-            elif jet_exit_par_south > jet_exit_par_north:
+            elif jet_exit_par_south_num > jet_exit_par_north_num:
                 # The ray intersects the south lobe
 
                 if self.jet_angle < self.inclination:
