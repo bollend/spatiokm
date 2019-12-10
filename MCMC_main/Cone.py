@@ -901,20 +901,10 @@ class Disk_wind(Jet):
         jet_entry_par_south, jet_exit_par_south = \
                         self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_south)
 
-        if jet_entry_par_north is None:
-
-            jet_entry_par_north_num = 0
-        else:
-
-            jet_entry_par_north_num = jet_entry_par_north
-
-        if jet_entry_par_south is None:
-
-            jet_entry_par_south_num = 0
-
-        else:
-
-            jet_entry_par_south_num = jet_entry_par_south
+        jet_entry_par_north_num = 0 if jet_entry_par_north is None else jet_entry_par_north
+        jet_exit_par_north_num  = 0 if jet_exit_par_north is None else jet_exit_par_north
+        jet_entry_par_south_num = 0 if jet_entry_par_south is None else jet_entry_par_south
+        jet_exit_par_south_num  = 0 if jet_exit_par_south is None else jet_exit_par_south
 
         if (jet_entry_par_north is None and jet_entry_par_south is None):
             # The ray does not intersect the north or south lobe
