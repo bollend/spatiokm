@@ -34,7 +34,6 @@ def ln_probab(pars_walker,
         The probability of the model
     """
     pars_add = calc_additional_par(pars, pars_walker)
-
     lp = ln_prior(pars_walker, pars, pars_add)
 
     if np.isfinite(lp):
@@ -43,6 +42,7 @@ def ln_probab(pars_walker,
         probability += lp
 
         return probability
+
 
     return -np.inf
 
@@ -257,7 +257,7 @@ def ln_prior(pars_walker, pars, pars_add):
 
     ###### Primary radius and jet velocity
     if not (pars_walker[radius_id] < jet_height_above_star
-            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.85 * pars_add['roche_radius_primary_AU']
+            and pars['MODEL']['primary_radius']['min'] < pars_walker[radius_id] < 0.7 * pars_add['roche_radius_primary_AU']
             and pars_walker[v_edge_id] < pars_walker[v_max_id]
     ):
 
@@ -374,7 +374,7 @@ def calc_additional_par(pars, pars_walker):
         jet_angle_inner_id = pars['MODEL']['jet_angle_inner']['id']
         v_M                = pars_walker[velocity_edge_id] * np.tan(pars_walker[jet_angle_id])**.5
         v_in               = v_M * np.tan(pars_walker[jet_angle_inner_id])
-        secondary_radius   = 1.01*mass_sec**0.724 * R_sun / AU
+        secondary_radius   = 1.01*secondary_mass**0.724 * R_sun / AU
         roche_radius_s     = geometry_binary.calc_roche_radius(mass_ratio, 'secondary')
         roche_radius_s_AU  = roche_radius_s * primary_sma_AU
         disk_radius_out    = G * secondary_mass * M_sun \
