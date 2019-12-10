@@ -11,8 +11,6 @@ import geometry_binary
 from astropy import units as u
 import parameters_DICT
 import uncertainty_DICT
-import emcee
-from emcee.utils import MPIPool
 import MCMC
 import matplotlib.pylab as plt
 import time
@@ -249,7 +247,7 @@ list_phases = []
 
 for count,ph in enumerate(observed_spectra_dict.keys()):
     list_phases.append(ph)
-print(list_phases)
+
 array_phases = 0.01 * np.array(list_phases)
 n_phases = len(array_phases)
 

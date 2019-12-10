@@ -118,9 +118,14 @@ def ln_likelihood(pars,
 
         postAGB.centre = prim_pos
         jet.jet_centre = sec_pos
+
         if pars['OTHER']['tilt']==True:
 
             jet._set_orientation(np.array([sec_vel]))
+
+        if pars['OTHER']['jet_type']=='sdisk_wind' or pars['OTHER']['jet_type']=='sdisk_wind_strict':
+
+            jet._set_centre_shift(pars_add['disk_radius_out'])
 
         postAGB._set_grid()
         postAGB._set_grid_location()

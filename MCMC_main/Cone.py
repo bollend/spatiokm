@@ -1057,7 +1057,6 @@ class Sdisk_wind(Disk_wind):
                         double_tilt,
                         jet_cavity_angle)
 
-        self.jet_centre_outflow = self.jet_centre - self.centre_shift
         self.jet_angle_inner    = jet_angle_inner
         self.scaling_par        = scaling_par
         self.power_density_in      = power_density_in
@@ -1157,7 +1156,6 @@ class Sdisk_wind_strict(Disk_wind):
                         jet_cavity_angle,
                         centre_shift)
 
-        self.jet_centre_outflow = jet_centre - centre_shift
         self.scaling_par        = scaling_par
         self.power_density      = power_density
 
@@ -1198,5 +1196,5 @@ class Sdisk_wind_strict(Disk_wind):
 
             density[indices_south] = (self.polar_angle_gridpoints[indices_south] / self.jet_angle)**self.power_density \
                                 * np.dot(self.gridpoints[indices_south,:] - self.jet_centre_outflow_south, self.jet_orientation * np.array([1,1,-1]))**-2
-                                
+
         return density

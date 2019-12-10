@@ -223,7 +223,7 @@ for param in parameters['MODEL'].keys():
 ###### Run the mcmc chain ######################################################
 
 for result in sampler.sample(parameters_init, iterations=parameters['OTHER']['n_iter'], store=False):
-    position = result[0]
+    position = result.coords
     f = open(OutputDir+'/MCMC_chain_output.dat', 'ab')
     np.savetxt(f, np.array(position))
     f.close()
