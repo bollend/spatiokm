@@ -1103,8 +1103,8 @@ class Sdisk_wind(Disk_wind):
 
         density[indices_in_north] = (self.polar_angle_gridpoints[indices_in_north] / self.jet_angle_inner)**self.power_density_in \
                             * np.dot(self.gridpoints[indices_in_north,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
-        density[indices_out_north] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                            * np.dot(self.gridpoints[indices_out,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
+        density[indices_out_north] = (self.polar_angle_gridpoints[indices_out_north] / self.jet_angle_inner)**self.power_density_out \
+                            * np.dot(self.gridpoints[indices_out_north,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
 
         if self.double_tilt==False:
 
