@@ -1073,12 +1073,12 @@ class Sdisk_wind(Disk_wind):
         a polar angle smaller than the cavity angle.
         """
 
-        pol_velocity = np.zeros(number_of_gridpoints)
-        indices_in        = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
-        indices_out       = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
-        v_edge_scaled     = self.scaling_par * self.velocity_edge
-        v_M               = v_edge_scaled * np.tan(self.jet_angle)**.5
-        v_in_scaled       = v_M * np.tan(self.jet_angle_inner)**-.5
+        pol_velocity  = np.zeros(number_of_gridpoints)
+        indices_in    = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
+        indices_out   = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
+        v_edge_scaled = self.scaling_par * self.velocity_edge
+        v_M           = v_edge_scaled * np.tan(self.jet_angle)**.5
+        v_in_scaled   = v_M * np.tan(self.jet_angle_inner)**-.5
 
         ###### The innner velocities
         pol_velocity[indices_in] = self.velocity_max + (v_in_scaled - self.velocity_max)\
@@ -1096,34 +1096,32 @@ class Sdisk_wind(Disk_wind):
         of the polar angle and the height of the jet.
         """
         density     = np.zeros(number_of_gridpoints)
-        indices_in  = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
-        indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
+        indices_in_north  = np.where((self.gridpoints[:,2] > 0) & (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
+        indices_in_south  = np.where((self.gridpoints[:,2] < 0) & (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
+        indices_out_north = np.where((self.gridpoints[:,2] > 0) & (self.polar_angle_gridpoints > self.jet_angle_inner))
+        indices_out_south = np.where((self.gridpoints[:,2] < 0) & (self.polar_angle_gridpoints > self.jet_angle_inner))
 
-        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
-                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
-        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
+        density[indices_in_north] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
+                            * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
+        density[indices_out_north] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
+                            * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
 
-    density     = np.zeros(number_of_gridpoints)
-    indices_in  = np.where( (self.polar_angle_gridpoints > self.jet_cavity_angle) & (self.polar_angle_gridpoints < self.jet_angle_inner) )
-    indices_out = np.where(self.polar_angle_gridpoints > self.jet_angle_inner)
+        if self.double_tilt==False:
 
-    if self.south_tilt_intersection==False:
+            density[indices_in_south] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
+                                * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_south, self.jet_orientation)**-2
 
-        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
-                            * np.dot(self.gridpoints[indices_in,:] - self.jet_centre, self.jet_orientation)**-2
+            density[indices_out_south] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
+                                * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_south, self.jet_orientation)**-2
 
-        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                            * np.dot(self.gridpoints[indices_out,:] - self.jet_centre, self.jet_orientation)**-2
+        else:
 
-    else:
+            density[indices_in_south] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
+                                * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_south, self.jet_orientation* np.array([1,1,-1]))**-2
 
-        density[indices_in] = (self.polar_angle_gridpoints[indices_in] / self.jet_angle_inner)**self.power_density_in \
-                            * np.dot(self.gridpoints[indices_in,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
-        density[indices_out] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
-                            * np.dot(self.gridpoints[indices_out,:]*np.array([1.,1.,-1.]) - self.jet_centre, self.jet_orientation)**-2
+            density[indices_out_south] = (self.polar_angle_gridpoints[indices_out] / self.jet_angle_inner)**self.power_density_out \
+                                * np.dot(self.gridpoints[indices,:] - self.jet_centre_outflow_south, self.jet_orientation * np.array([1,1,-1]))**-2
 
-    return density
         return density
 
 class Sdisk_wind_strict(Disk_wind):
@@ -1185,9 +1183,20 @@ class Sdisk_wind_strict(Disk_wind):
         of the polar angle and the height of the jet.
         """
         density = np.zeros(number_of_gridpoints)
-        indices = np.where(self.polar_angle_gridpoints > self.jet_cavity_angle)
+        indices_north = np.where((self.gridpoints[:,2] > 0) & (self.polar_angle_gridpoints > self.jet_cavity_angle))
+        indices_south = np.where((self.gridpoints[:,2] < 0) & (self.polar_angle_gridpoints > self.jet_cavity_angle))
 
-        density[indices] = (self.polar_angle_gridpoints[indices] / self.jet_cavity_angle)**self.power_density \
-                            * np.dot(self.gridpoints[indices,:] - self.jet_centre, self.jet_orientation)**-2
+        density[indices_north] = (self.polar_angle_gridpoints[indices_north] / self.jet_angle)**self.power_density \
+                            * np.dot(self.gridpoints[indices_north,:] - self.jet_centre_outflow_north, self.jet_orientation)**-2
 
+        if self.double_tilt==False:
+
+            density[indices_south] = (self.polar_angle_gridpoints[indices_south] / self.jet_angle)**self.power_density \
+                                * np.dot(self.gridpoints[indices_south,:] - self.jet_centre_outflow_south, self.jet_orientation)**-2
+
+        else:
+
+            density[indices_south] = (self.polar_angle_gridpoints[indices_south] / self.jet_angle)**self.power_density \
+                                * np.dot(self.gridpoints[indices_south,:] - self.jet_centre_outflow_south, self.jet_orientation * np.array([1,1,-1]))**-2
+                                
         return density
