@@ -5,29 +5,29 @@ inclination                                   radians
 min               0.785               FLOAT   45.
 max               1.396               FLOAT   80.
 jet_angle                                     radians
-min               0.698               FLOAT   40.
-max               1.39               FLOAT    79.
+min               0.785               FLOAT   45.
+max               1.39                FLOAT    79.
 jet_cavity_angle                              radians
 min               0.                  FLOAT   0.
 max               0.785               FLOAT   45.
 jet_tilt                                      radians
 min               0.                  FLOAT   0.
-max               0.139               FLOAT   8.
+max               0.2618              FLOAT   15.
 velocity_max                                  km/s
 min               400.                FLOAT
-max               1500.               FLOAT
+max               1200.               FLOAT
 velocity_edge                                 km/s
 min               0.1                 FLOAT
-max               70.                FLOAT
+max               40.                 FLOAT
 exp_velocity
-min               -2.                FLOAT
+min               -3.                 FLOAT
 max               10.                 FLOAT
 power_density
 min               0.                  FLOAT
 max               15                  FLOAT
 c_optical_depth
 min               0.                  FLOAT
-max               15.                 FLOAT
+max               6.                 FLOAT
 primary_radius                                  AU
 min               0                   FLOAT
 max               5                   FLOAT
@@ -45,9 +45,9 @@ primary_sma         1.                FLOAT           R_p
 GROUP               OTHER
 jet_type            stellar_jet       STRING
 object_id           BD+46_442         STRING
-gridpoints_LOS      201               INT
+gridpoints_LOS      2001               INT
 gridpoints_primary  50                INT
-n_walkers           128               INT
+n_walkers           20                INT
 n_iter              5000              INT
 synthetic           transposed.txt    STRING
 power_velocity      2                 INT
@@ -58,33 +58,33 @@ wavelength_bins     801               INT
 velocity_range      2000.             FLOAT
 photospheric        0                 INT
 template            0                 INT
-previous_walkers    False             BOOL
+dir_previous_chain  output_15         STRING
 uncertainty_back    False             BOOL
 cut_waveregion      True              BOOL
-dir_previous_chain  False             BOOL
+previous_chain      True             BOOL
 tilt                True              BOOL
 double_tilt         False             BOOL
 FINISH
 GROUP               BESTFIT
-inclination         60             FLOAT           radians
-jet_angle           41.5             FLOAT           radians
-jet_cavity_angle    17.82             FLOAT           radians
-jet_tilt            3.71             FLOAT           radians
-velocity_max        895               FLOAT           km/s
-velocity_edge       139              FLOAT           km/s
-exp_velocity        8              FLOAT
-power_density       7.9               FLOAT
-c_optical_depth     5.9      FLOAT
-primary_radius      0.13              FLOAT            AU
+inclination         56             FLOAT           radians
+jet_angle           38            FLOAT           radians
+jet_cavity_angle    12.7             FLOAT           radians
+jet_tilt            14.9             FLOAT           radians
+velocity_max        740               FLOAT           km/s
+velocity_edge       48              FLOAT           km/s
+exp_velocity        0.6              FLOAT
+power_density       15               FLOAT
+c_optical_depth     2.28      FLOAT
+primary_radius      0.123              FLOAT            AU
 FINISHMODEL
-inclination         1.05             FLOAT           radians
-jet_angle           0.73              FLOAT           radians
-jet_cavity_angle    0.33             FLOAT           radians
-jet_tilt            0.063             FLOAT           radians
-velocity_max        1330               FLOAT           km/s
-velocity_edge       146              FLOAT           km/s
-exp_velocity        5.9              FLOAT
-power_density       6.27               FLOAT
-c_optical_depth     1.31       FLOAT
-primary_radius      0.07              FLOAT            AU
+inclination         74.4             FLOAT           radians
+jet_angle           68.             FLOAT           radians
+jet_cavity_angle    43.             FLOAT           radians
+jet_tilt            5.48             FLOAT           radians
+velocity_max        660               FLOAT           km/s
+velocity_edge       14              FLOAT           km/s
+exp_velocity        -1.76              FLOAT
+power_density       14.7               FLOAT
+c_optical_depth     1.26      FLOAT
+primary_radius      0.113              FLOAT            AU
 FINISHMODEL

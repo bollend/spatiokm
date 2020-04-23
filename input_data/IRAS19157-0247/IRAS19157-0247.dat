@@ -1,0 +1,94 @@
+PARAMETER           VALUE              Type       DIMENSIONS
+------------------------------------------------------------
+GROUP               MODEL
+inclination                                   radians
+min               None                 FLOAT   40.
+max               None               FLOAT   80.
+jet_angle                                     radians
+min               None               FLOAT   30
+max               None                FLOAT    79.
+jet_angle_inner                                     radians
+min               None               FLOAT   20
+max               None                FLOAT    79.
+jet_cavity_angle                              radians
+min               None               FLOAT   20.
+max               None               FLOAT   45.
+jet_tilt                                      radians
+min               None                  FLOAT   0.
+max               None              FLOAT   15.
+velocity_max                                  km/s
+min               None                FLOAT
+max               None               FLOAT
+velocity_edge                                 km/s
+min               None                 FLOAT
+max               None                 FLOAT
+exp_velocity
+min               None                 FLOAT
+max               None                 FLOAT
+power_density_in
+min               None                  FLOAT
+max               None                  FLOAT
+power_density_out
+min               None                  FLOAT
+max               None                  FLOAT
+c_optical_depth
+min               None                  FLOAT
+max               None                 FLOAT
+primary_radius                                  AU
+min               None                   FLOAT
+max               None                   FLOAT
+GROUP               BINARY
+period              119.6            FLOAT          days
+T0                  2451366.5         FLOAT         BJD
+omega               72.1              FLOAT           degrees
+mass_function       0.0053             FLOAT           M_sol
+ecc                 0.34             FLOAT
+primary_asini       0.083            FLOAT            AU
+gamma               31.4            FLOAT            km s^-1
+primary_rad_vel     8.0              FLOAT           km s^-1
+primary_mass        0.6               FLOAT           M_sol
+primary_sma         1               FLOAT           R_p
+GROUP               OTHER
+jet_type            None            STRING
+object_id           None         STRING
+gridpoints_LOS      None               INT
+gridpoints_primary  None                INT
+n_walkers           None                INT
+mcmc_stepsize       None                INT
+n_iter              None              INT
+synthetic           None    STRING
+power_velocity      None                 INT
+wave_center         None               FLOAT
+wave_begin          None            FLOAT
+wave_end            None               FLOAT
+wavelength_bins     None               INT
+velocity_range      None               FLOAT
+photospheric        None                 INT
+template            None                 INT
+dir_previous_chain  None         STRING
+T_min               None              FLOAT
+T_max               None              FLOAT
+T_step              None               FLOAT
+density_log10_min    None               FLOAT
+density_log10_max    None               FLOAT
+density_log10_step   None              FLOAT
+uncertainty_back    None              BOOL
+cut_waveregion      None              BOOL
+previous_chain      None             BOOL
+tilt                None              BOOL
+double_tilt         None             BOOL
+FINISH
+GROUP               BESTFIT
+inclination         None             FLOAT           radians
+jet_angle           None             FLOAT           radians
+jet_angle_inner     None             FLOAT
+jet_cavity_angle    None             FLOAT           radians
+jet_tilt            None             FLOAT           radians
+velocity_max        None               FLOAT           km/s
+velocity_edge       None              FLOAT           km/s
+exp_velocity        None              FLOAT
+power_density_in    None               FLOAT
+power_density_out   None            FLOAT
+c_optical_depth     None      FLOAT
+primary_radius      None              FLOAT            AU
+FINISHMODEL

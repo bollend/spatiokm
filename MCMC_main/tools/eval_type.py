@@ -6,15 +6,34 @@ def evaluate(string, string_type):
 
     if string_type=='FLOAT':
 
-        return float(string)
+        try:
+            
+            return float(string)
+
+        except ValueError as error:
+
+            print('ValueError: The parameter \'%s\' of the object.dat file should be of type FLOAT' % (string))
 
     if string_type=='INT':
 
-        return int(string)
+        try:
+
+            return int(string)
+
+        except ValueError as error:
+
+            print('ValueError: The parameter \'%s\' of the object.dat file should be of type INT' % (string))
 
     if string_type=='STRING':
 
-        return string
+        try:
+
+            return string
+
+        except ValueError as error:
+
+            print('ValueError: The parameter \'%s\' of the object.dat file should be of type STRING' % (string))
+
 
     if string_type=='BOOL':
 
@@ -22,6 +41,10 @@ def evaluate(string, string_type):
 
             return True
 
-        else:
+        elif string=='False':
 
             return False
+
+        else:
+
+            print('ValueError: The parameter \'%s\' of the object.dat file should be of type BOOL' % (string))

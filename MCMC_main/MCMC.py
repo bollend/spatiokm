@@ -101,7 +101,7 @@ def ln_likelihood(pars,
     if return_intensity==True:
 
         model_spectra = {}
-
+    ndata = 0
     for phase in data_spectra.keys():
     ###### iterate over each orbital phase
 
@@ -136,6 +136,7 @@ def ln_likelihood(pars,
 
             model_spectra[phase] = {}
 
+
         for spectrum in data_spectra[phase].keys():
             ###### Iterate over all spectra with this phase
 
@@ -148,13 +149,13 @@ def ln_likelihood(pars,
 
             chi_squared   += chi_squared_spectrum
             ln_likelihood += ln_likelihood_spectrum
-
+            ndata += len(data_spectra[phase][spectrum])
             if return_intensity==True:
 
                 model_spectra[phase][spectrum] = model_spectrum
 
     if return_intensity==True:
-
+        
         return chi_squared, ln_likelihood, model_spectra
 
     else:

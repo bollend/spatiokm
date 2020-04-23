@@ -70,7 +70,11 @@ def read_model_parameters(inputfile):
 
         if group=='BESTFIT':
 
-            if (split_lines[0]=='inclination'
+            if split_lines[1]=='None':
+
+                parameters[split_lines[0]] = eval_type.evaluate(split_lines[1], split_lines[2])
+
+            elif (split_lines[0]=='inclination'
                 or split_lines[0]=='jet_angle'
                 or split_lines[0]=='jet_cavity_angle'
                 or split_lines[0]=='jet_tilt'

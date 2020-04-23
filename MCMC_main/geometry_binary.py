@@ -148,9 +148,9 @@ def pos_vel_primary_secondary(phasenumber, period, omega,
     t               = phasenumber * 0.01 * period
 
     orbit_primary   = pyasl.KeplerEllipse(sma_prim, period, e=ecc, Omega=0.,
-                    i=0., w=omega)
+                    i=0, w=omega)
     orbit_secondary = pyasl.KeplerEllipse(sma_sec, period, e=ecc, Omega=0.,
-                    i=0., w=omega+180)
+                    i=0, w=omega+180)
 
     position_primary_AU           = -orbit_primary.xyzPos((t + (T_inf - T0))%period)
     position_secondary_AU         = -orbit_secondary.xyzPos((t + (T_inf - T0))%period)

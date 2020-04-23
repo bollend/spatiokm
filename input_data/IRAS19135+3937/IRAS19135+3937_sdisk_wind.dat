@@ -1,0 +1,115 @@
+PARAMETER           VALUE              Type       DIMENSIONS
+------------------------------------------------------------
+GROUP               MODEL
+inclination                                   radians
+min               0.692               FLOAT   40.
+max               1.553               FLOAT   89.
+jet_angle                                     radians
+min               0.52               FLOAT   30.
+max               1.483               FLOAT   85.
+jet_angle_inner                                     radians
+min               0.35               FLOAT   30.
+max               1.483               FLOAT   85.
+jet_cavity_angle                              radians
+min               0.175                  FLOAT   10.
+max               0.785               FLOAT   45.
+jet_tilt                                      radians
+min               -0.17              FLOAT   -10
+max               0.17               FLOAT   10
+velocity_max                                  km/s
+min               400.                FLOAT
+max               1400.               FLOAT
+velocity_edge                                 km/s
+min               0.1                 FLOAT
+max               150.                FLOAT
+scaling_par
+min               0                   FLOAT
+max               1                   FLOAT
+exp_velocity
+min               -2.                FLOAT
+max               10.                 FLOAT
+power_density_in
+min               0.                  FLOAT
+max               15                  FLOAT
+power_density_out
+min               -15                 FLOAT
+max               15                  FLOAT
+c_optical_depth
+min               0.                  FLOAT
+max               6.                 FLOAT
+primary_radius                                  AU
+min               0                   FLOAT
+max               2                   FLOAT
+GROUP               BINARY
+period              127.08            FLOAT     days
+T0                  2454997.8         FLOAT     BJD
+omega               66.               FLOAT     degrees
+mass_function       0.07              FLOAT     M_sol
+ecc                 0.14              FLOAT
+primary_asini       0.20              FLOAT     AU
+gamma               1.3               FLOAT     km s^-1
+primary_rad_vel     17.71             FLOAT     km s^-1
+primary_mass        0.6               FLOAT     M_sol
+primary_sma         1.                FLOAT     R_p
+GROUP               OTHER
+jet_type            sdisk_wind           STRING
+object_id           IRAS19135+3937    STRING
+gridpoints_LOS      2001               INT
+gridpoints_primary  50                INT
+n_walkers           128               INT
+mcmc_stepsize       8                INT
+n_iter              5000              INT
+synthetic           06250_g+1.0_m10p00_hr_vsini10.txt    STRING
+power_velocity      2                 INT
+wave_center         6562.82           FLOAT
+wave_begin          6547.5            FLOAT
+wave_end            6567.             FLOAT
+wavelength_bins     801               INT
+velocity_range      2000.             FLOAT
+photospheric        0                 INT
+template            0                 INT
+T_min               4880              FLOAT
+T_max               5760              FLOAT
+T_step              40               FLOAT
+density_log10_min             15.7      FLOAT
+density_log10_max             16.3      FLOAT
+density_log10_step            0.03     FLOAT
+dir_previous_chain  output_15         STRING
+uncertainty_back    True              BOOL
+cut_waveregion      True              BOOL
+previous_chain      False             BOOL
+tilt                True              BOOL
+double_tilt         True             BOOL
+bestfit_t           5320              FLOAT
+bestfit_p           16                FLOAT
+FINISH
+GROUP               BESTFIT
+inclination         71.8             FLOAT           radians
+jet_angle           67.3            FLOAT           radians
+jet_angle_inner     64.4             FLOAT           radians
+jet_cavity_angle    24.7             FLOAT           radians
+jet_tilt            5.7             FLOAT           radians
+velocity_max        640               FLOAT           km/s
+velocity_edge       66              FLOAT           km/s
+scaling_par         0.044            FLOAT
+exp_velocity        -0.8              FLOAT
+power_density_in    14.7                  FLOAT
+power_density_out   10                   FLOAT
+c_optical_depth     1.51      FLOAT
+primary_radius      0.105              FLOAT            AU
+FINISHMODEL
+GROUP               BESTFIT
+inclination         70             FLOAT           radians
+jet_angle           65            FLOAT           radians
+jet_angle_inner     62             FLOAT           radians
+jet_cavity_angle    0             FLOAT           radians
+jet_tilt            0             FLOAT           radians
+velocity_max        1035               FLOAT           km/s
+velocity_edge       64              FLOAT           km/s
+scaling_par         0.03            FLOAT
+exp_velocity        0.7              FLOAT
+power_density_in    14.7                  FLOAT
+power_density_out   -2.57                   FLOAT
+c_optical_depth     1.56      FLOAT
+primary_radius      0.10              FLOAT            AU
+FINISHMODEL
