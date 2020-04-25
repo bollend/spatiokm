@@ -901,134 +901,215 @@ class Disk_wind(Jet):
         jet_entry_par_south, jet_exit_par_south = \
                         self.entry_exit_ray_cone(origin_ray, self.jet_angle, self.jet_centre_outflow_south)
 
+        # Make numerical values for the four parameters, in case of using '<' or '>' to compare.
         jet_entry_par_north_num = 0 if jet_entry_par_north is None else jet_entry_par_north
-        jet_exit_par_north_num  = 0 if jet_exit_par_north is None else jet_exit_par_north
+        jet_exit_par_north_num  = 0 if jet_exit_par_north  is None else jet_exit_par_north
         jet_entry_par_south_num = 0 if jet_entry_par_south is None else jet_entry_par_south
-        jet_exit_par_south_num  = 0 if jet_exit_par_south is None else jet_exit_par_south
+        jet_exit_par_south_num  = 0 if jet_exit_par_south  is None else jet_exit_par_south
 
         if (jet_entry_par_north is None and jet_entry_par_south is None):
             # The ray does not intersect the north or south lobe
             jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
-        elif (jet_entry_par_north_num < 0 and jet_entry_par_south_num < 0):
+        elif (jet_entry_par_north_num > 0 and jet_entry_par_south is None):
+            # The ray goes through the north lobe. The line-of-sight will
+            # have a jet entry and jet exit point.
+            jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                jet_exit_par_north, number_of_gridpoints)
+            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+            jet_entry_par      = jet_entry_par_north
+            jet_exit_par       = jet_exit_par_north
+
+
+        elif (jet_entry_par_north is None and jet_entry_par_south > 0):
+            # The ray goes through the south lobe The line-of-sight will
+            # have a jet entry and jet exit point.
+            jet_entry_par      = jet_entry_par_south
+            jet_exit_par       = jet_exit_par_south
+            jet_pos_parameters = np.linspace(jet_entry_par, \
+                                jet_exit_par, number_of_gridpoints)
+            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+        elif (jet_exit_par_north_num < 0 and jet_exit_par_south_num < 0):
             # The ray does not intersect the north or south lobe
             jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
-        if (jet_entry_par_north is not None and jet_entry_par_south is None)\
-                or\
-             (jet_entry_par_north is not None and jet_entry_par_south_num < 0):
-            # The ray only intersects the north lobe or the ray intersects both
-            # lobes, but the south lobe in the wrong direction
+        elif (jet_entry_par_north_num > 0 and jet_entry_par_south_num > 0):
+            # The ray goes through both tilted lobes
 
-            if jet_entry_par_north < 0:
-                # The ray intersects the North cone in the wrong direction
-                # (away from the observer) or the entry point is behind the star
-                # (the star is located in the jet)
-                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
-
-            elif self.jet_angle < self.inclination:
-                # The jet half-opening angle is smaller than the inclination
-                # angle of the system. The line-of-sight will have a jet entry
-                # and jet exit point.
+            if (jet_entry_par_north_num < jet_entry_par_south_num):
+                # The ray goes through the north lobe. The line-of-sight will
+                # have a jet entry and jet exit point.
                 jet_pos_parameters = np.linspace(jet_entry_par_north, \
                                      jet_exit_par_north, number_of_gridpoints)
                 self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
                 jet_entry_par      = jet_entry_par_north
                 jet_exit_par       = jet_exit_par_north
 
-            elif self.jet_angle > self.inclination:
-                # The jet half-opening angle is larger than the inclination angle
-                # of the system. The line-of-sight will only have a jet entry point
-                jet_entry_par      = np.copy(jet_exit_par_north)
-                jet_exit_par       = None
-                jet_pos_parameters = np.linspace(jet_entry_par, \
-                                        jet_entry_par + 5., number_of_gridpoints)
-                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-
-        elif (jet_entry_par_north is None and jet_entry_par_south is not None)\
-               or\
-             (jet_entry_par_north_num < 0 and jet_entry_par_south is not None):
-            # The ray only intersects the south lobe or the ray intersects both
-            # lobes, but the north lobe in the wrong direction
-
-            if jet_entry_par_south < 0:
-                # The ray intersects the south cone in the wrong direction
-                # (away from the observer) or the entry point is behind the star
-                # (the star is located in the jet)
-                jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
-
-            elif self.jet_angle < self.inclination:
-                # The jet half-opening angle is smaller than the inclination
-                # angle of the system. The line-of-sight will have a jet entry
-                # and jet exit point.
+            elif (jet_exit_par_north_num < jet_exit_par_south_num):
+                # The ray goes through the south lobe The line-of-sight will
+                # have a jet entry and jet exit point.
                 jet_entry_par      = jet_entry_par_south
                 jet_exit_par       = jet_exit_par_south
                 jet_pos_parameters = np.linspace(jet_entry_par, \
                                      jet_exit_par, number_of_gridpoints)
                 self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
 
-            elif self.jet_angle > self.inclination:
-                # The jet half-opening angle is larger than the inclination angle
-                # of the system. The line-of-sight will only have a jet entry point
-                jet_entry_par      = np.copy(jet_exit_par_south)
-                jet_exit_par       = None
-                jet_pos_parameters = np.linspace(jet_entry_par, \
-                                        jet_entry_par + 5., number_of_gridpoints)
-                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-
-        elif jet_entry_par_north_num > 0 and jet_exit_par_south_num > 0:
-            # The ray intersects both lobes in the right direction
-
-            if jet_entry_par_north < jet_entry_par_south:
-                # The ray intersects the north lobe
-
-                if self.jet_angle < self.inclination:
-                    # The jet half-opening angle is smaller than the inclination
-                    # angle of the system. The line-of-sight will have a jet entry
-                    # and jet exit point.
-                    jet_pos_parameters = np.linspace(jet_entry_par_north, \
-                                         jet_exit_par_north, number_of_gridpoints)
-                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-                    jet_entry_par      = jet_entry_par_north
-                    jet_exit_par       = jet_exit_par_north
-
-                elif self.jet_angle > self.inclination:
-                    # The jet half-opening angle is larger than the inclination angle
-                    # of the system. The line-of-sight will only have a jet entry point
-                    jet_entry_par      = np.copy(jet_exit_par_north)
-                    jet_exit_par       = None
-                    jet_pos_parameters = np.linspace(jet_entry_par, \
-                                            jet_entry_par + 5., number_of_gridpoints)
-                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-
-            elif jet_exit_par_south_num > jet_exit_par_north_num:
-                # The ray intersects the south lobe
-
-                if self.jet_angle < self.inclination:
-                    # The jet half-opening angle is smaller than the inclination
-                    # angle of the system. The line-of-sight will have a jet entry
-                    # and jet exit point.
-                    jet_entry_par      = jet_entry_par_south
-                    jet_exit_par       = jet_exit_par_south
-                    jet_pos_parameters = np.linspace(jet_entry_par, \
-                                         jet_exit_par, number_of_gridpoints)
-                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-
-                elif self.jet_angle > self.inclination:
-                    # The jet half-opening angle is larger than the inclination angle
-                    # of the system. The line-of-sight will only have a jet entry point
-                    jet_entry_par      = np.copy(jet_exit_par_south)
-                    jet_exit_par       = None
-                    jet_pos_parameters = np.linspace(jet_entry_par, \
-                                            jet_entry_par + 5., number_of_gridpoints)
-                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-
             else:
-                # The ray intersects both lobes in the right direction, which means
-                # the ray intersects the disk. Hence, the ray will be blocked by
-                # the disk.
-
+                # The ray intersects the circumcompanion disk
                 jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        elif (jet_entry_par_north_num > 0 and jet_exit_par_south_num < 0):
+            # The ray goes through the north lobe. The line-of-sight will
+            # have a jet entry and jet exit point.
+            jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                 jet_exit_par_north, number_of_gridpoints)
+            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+            jet_entry_par      = jet_entry_par_north
+            jet_exit_par       = jet_exit_par_north
+
+
+
+        elif (jet_entry_par_north_num < 0 and jet_entry_par_south_num < 0)\
+                and\
+             (jet_exit_par_north_num > 0 and jet_exit_par_south_num > 0)\
+                and\
+            (jet_exit_par_north_num < jet_exit_par_south_num):
+            # The ray enters the north lobe and only has an entry point
+            jet_entry_par      = np.copy(jet_exit_par_north)
+            jet_exit_par       = None
+            jet_pos_parameters = np.linspace(jet_entry_par, \
+                                 jet_entry_par + 100., number_of_gridpoints)
+            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+
+        else:
+            # Other situations
+            jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+
+        """
+        The following is the old, incorrect version
+        """
+        #
+        # if (jet_entry_par_north is None and jet_entry_par_south is None):
+        #     # The ray does not intersect the north or south lobe
+        #     jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+        #
+        # elif (jet_entry_par_north is not None and jet_entry_par_south is None)\
+        #         or\
+        #      (jet_entry_par_north is not None and jet_exit_par_south_num < 0):
+        #     # The ray only intersects the north lobe or the ray intersects both
+        #     # lobes, but the south lobe in the wrong direction
+        #
+        #     if jet_entry_par_north < 0:
+        #         # The ray intersects the North cone in the wrong direction
+        #         # (away from the observer) or the entry point is behind the star
+        #         # (the star is located in the jet)
+        #         jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+        #
+        #     elif self.jet_angle < self.inclination:
+        #     # elif jet_exit_par_north is not None
+        #         # The jet half-opening angle is smaller than the inclination
+        #         # angle of the system. The line-of-sight will have a jet entry
+        #         # and jet exit point.
+        #         jet_pos_parameters = np.linspace(jet_entry_par_north, \
+        #                              jet_exit_par_north, number_of_gridpoints)
+        #         self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #         jet_entry_par      = jet_entry_par_north
+        #         jet_exit_par       = jet_exit_par_north
+        #
+        #     elif self.jet_angle > self.inclination:
+        #         # The jet half-opening angle is larger than the inclination angle
+        #         # of the system. The line-of-sight will only have a jet entry point
+        #         jet_entry_par      = np.copy(jet_exit_par_north)
+        #         jet_exit_par       = None
+        #         jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                                 jet_entry_par + 5., number_of_gridpoints)
+        #         self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        # elif (jet_entry_par_north is None and jet_entry_par_south is not None)\
+        #        or\
+        #      (jet_entry_par_north_num < 0 and jet_entry_par_south is not None):
+        #     # The ray only intersects the south lobe or the ray intersects both
+        #     # lobes, but the north lobe in the wrong direction
+        #
+        #     if jet_entry_par_south < 0:
+        #         # The ray intersects the south cone in the wrong direction
+        #         # (away from the observer) or the entry point is behind the star
+        #         # (the star is located in the jet)
+        #         jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
+        #
+        #     elif self.jet_angle < self.inclination:
+        #         # The jet half-opening angle is smaller than the inclination
+        #         # angle of the system. The line-of-sight will have a jet entry
+        #         # and jet exit point.
+        #         jet_entry_par      = jet_entry_par_south
+        #         jet_exit_par       = jet_exit_par_south
+        #         jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                              jet_exit_par, number_of_gridpoints)
+        #         self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        #     elif self.jet_angle > self.inclination:
+        #         # The jet half-opening angle is larger than the inclination angle
+        #         # of the system. The line-of-sight will only have a jet entry point
+        #         jet_entry_par      = np.copy(jet_exit_par_south)
+        #         jet_exit_par       = None
+        #         jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                                 jet_entry_par + 5., number_of_gridpoints)
+        #         self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        # elif jet_entry_par_north_num > 0 and jet_exit_par_south_num > 0:
+        #     # The ray intersects both lobes in the right direction
+        #
+        #     if jet_entry_par_north < jet_entry_par_south:
+        #         # The ray intersects the north lobe
+        #
+        #         if self.jet_angle < self.inclination:
+        #             # The jet half-opening angle is smaller than the inclination
+        #             # angle of the system. The line-of-sight will have a jet entry
+        #             # and jet exit point.
+        #             jet_pos_parameters = np.linspace(jet_entry_par_north, \
+        #                                  jet_exit_par_north, number_of_gridpoints)
+        #             self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #             jet_entry_par      = jet_entry_par_north
+        #             jet_exit_par       = jet_exit_par_north
+        #
+        #         elif self.jet_angle > self.inclination:
+        #             # The jet half-opening angle is larger than the inclination angle
+        #             # of the system. The line-of-sight will only have a jet entry point
+        #             jet_entry_par      = np.copy(jet_exit_par_north)
+        #             jet_exit_par       = None
+        #             jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                                     jet_entry_par + 5., number_of_gridpoints)
+        #             self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        #     elif jet_exit_par_south_num > jet_exit_par_north_num:
+        #         # The ray intersects the south lobe
+        #
+        #         if self.jet_angle < self.inclination:
+        #             # The jet half-opening angle is smaller than the inclination
+        #             # angle of the system. The line-of-sight will have a jet entry
+        #             # and jet exit point.
+        #             jet_entry_par      = jet_entry_par_south
+        #             jet_exit_par       = jet_exit_par_south
+        #             jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                                  jet_exit_par, number_of_gridpoints)
+        #             self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        #         elif self.jet_angle > self.inclination:
+        #             # The jet half-opening angle is larger than the inclination angle
+        #             # of the system. The line-of-sight will only have a jet entry point
+        #             jet_entry_par      = np.copy(jet_exit_par_south)
+        #             jet_exit_par       = None
+        #             jet_pos_parameters = np.linspace(jet_entry_par, \
+        #                                     jet_entry_par + 5., number_of_gridpoints)
+        #             self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+        #
+        #     else:
+        #         # The ray intersects both lobes in the right direction, which means
+        #         # the ray intersects the disk. Hence, the ray will be blocked by
+        #         # the disk.
+        #
+        #         jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
 
         return jet_entry_par, jet_exit_par, self.gridpoints
 
