@@ -165,7 +165,7 @@ class Jet_model(object):
 
         return entry_parameter, exit_parameter
 
-    def intersection(self, origin_ray, angle_jet, jet_centre, number_of_gridpoints):
+    def intersection(self, origin_ray, angle_jet, jet_centre, number_of_gridpoints, max_pathlength=5):
         """
         Determines the coordinates of the intersection between the jet cone and
         the line-of-sight.
@@ -177,6 +177,10 @@ class Jet_model(object):
             intersects
         number_of_gridpoints : integer
             The number of gridpoints along the line-of-sight through the jet
+        max_pathlength : float
+            The longest pathlength along which to calculate the density and velocity
+            This is used in case the pathlength can become too long (for example 100AU)
+            The max_pathlength will be the limit.
         Returns
         =======
         jet_entry_par : float
@@ -192,8 +196,7 @@ class Jet_model(object):
         """
         # Calculate the discriminant of the second order equation for the
         # intersection of the ray and the cone
-        jet_entry_par, jet_exit_par = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation)
-
+        jet_entry_par, jet_exit_par  = self.entry_exit_ray_cone(origin_ray, angle_jet, jet_centre, self.jet_orientation)
         check_south                  = False
         self.south_tilt_intersection = False
 
@@ -209,8 +212,21 @@ class Jet_model(object):
 
         elif jet_entry_par > 0:
             # the ray intersects the cone in the correct direction in two places
-            jet_pos_entry = origin_ray + jet_entry_par * self.ray
-            jet_pos_exit = origin_ray + jet_exit_par * self.ray
+
+            jet_pathlength = jet_exit_par - jet_entry_par
+
+            if jet_pathlength < max_pathlength:
+                # The pathlength is smaller than the maximum allowed pathlength
+
+                jet_pos_entry = origin_ray + jet_entry_par * self.ray
+                jet_pos_exit  = origin_ray + jet_exit_par * self.ray
+
+            else:
+                # The pathlength is longer than the maximum allowed pathlength
+
+                jet_pos_entry = origin_ray + jet_entry_par * self.ray
+                jet_pos_exit  = origin_ray + (jet_entry_par + max_pathlength) * self.ray
+
 
             if jet_pos_exit[2] < 0:
                 # The jet intersects the south cone
@@ -240,6 +256,7 @@ class Jet_model(object):
 
         else:
             # The jet intersects both the north and south cone.
+
             jet_pos_entry = origin_ray + jet_entry_par * self.ray
             jet_pos_exit = origin_ray + jet_exit_par * self.ray
 
@@ -254,7 +271,7 @@ class Jet_model(object):
                 jet_entry_par = np.copy(jet_exit_par)
                 jet_exit_par  = None
                 jet_pos_parameters  = np.linspace(jet_entry_par,\
-                                    jet_entry_par + 5., number_of_gridpoints)
+                                    jet_entry_par + max_pathlength, number_of_gridpoints)
                 self.gridpoints     = origin_ray + np.outer(jet_pos_parameters,
                                                             self.ray)
             else:
@@ -388,10 +405,10 @@ class Jet(Jet_model):
         super().__init__(inclination, jet_angle, jet_type, jet_centre,\
                         jet_orientation, jet_tilt, double_tilt)
 
-    def _set_gridpoints(self, origin_ray, number_of_gridpoints):
+    def _set_gridpoints(self, origin_ray, number_of_gridpoints, max_pathlength=5):
 
         self.jet_entry_par, self.jet_exit_par, self.gridpoints = \
-                    self.intersection(origin_ray, self.jet_angle, self.jet_centre, number_of_gridpoints)
+                    self.intersection(origin_ray, self.jet_angle, self.jet_centre, number_of_gridpoints, max_pathlength)
 
     def _set_gridpoints_unit_vector(self):
         """
@@ -838,13 +855,14 @@ class Disk_wind(Jet):
             self.jet_centre_outflow_north = self.jet_centre - self.centre_shift * self.jet_orientation
             self.jet_centre_outflow_south = self.jet_centre - np.array([1,1,-1]) * self.centre_shift * self.jet_orientation
 
-    def _set_gridpoints(self, origin_ray, number_of_gridpoints):
+    def _set_gridpoints(self, origin_ray, number_of_gridpoints, max_pathlength=5):
 
         self.jet_entry_par, self.jet_exit_par, self.gridpoints = \
                     self.intersection(origin_ray,
                                     self.jet_angle,
                                     self.jet_centre,
-                                    number_of_gridpoints)
+                                    number_of_gridpoints,
+                                    max_pathlength)
 
     def _set_gridpoints_unit_vector(self):
         """
@@ -868,7 +886,7 @@ class Disk_wind(Jet):
 
             self.gridpoints_unit_vector = None
 
-    def intersection(self, origin_ray, angle_jet, jet_centre, number_of_gridpoints):
+    def intersection(self, origin_ray, angle_jet, jet_centre, number_of_gridpoints, max_pathlength=5):
         """
         Determines the coordinates of the intersection between the jet cone and
         the line-of-sight for a disk wind
@@ -907,6 +925,9 @@ class Disk_wind(Jet):
         jet_entry_par_south_num = 0 if jet_entry_par_south is None else jet_entry_par_south
         jet_exit_par_south_num  = 0 if jet_exit_par_south  is None else jet_exit_par_south
 
+        jet_pathlength_north = jet_exit_par_north_num - jet_entry_par_north_num
+        jet_pathlength_south = jet_exit_par_south_num - jet_entry_par_south_num
+
         if (jet_entry_par_north is None and jet_entry_par_south is None):
             # The ray does not intersect the north or south lobe
             jet_entry_par, jet_exit_par, self.gridpoints = None, None, None
@@ -914,11 +935,22 @@ class Disk_wind(Jet):
         elif (jet_entry_par_north_num > 0 and jet_entry_par_south is None):
             # The ray goes through the north lobe. The line-of-sight will
             # have a jet entry and jet exit point.
-            jet_pos_parameters = np.linspace(jet_entry_par_north, \
-                                jet_exit_par_north, number_of_gridpoints)
-            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-            jet_entry_par      = jet_entry_par_north
-            jet_exit_par       = jet_exit_par_north
+
+            if jet_pathlength_north < max_pathlength:
+
+                jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                    jet_exit_par_north, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                jet_entry_par      = jet_entry_par_north
+                jet_exit_par       = jet_exit_par_north
+
+            else:
+
+                jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                    jet_entry_par_north + max_pathlength, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                jet_entry_par      = jet_entry_par_north
+                jet_exit_par       = jet_exit_par_north
 
 
         elif (jet_entry_par_north is None and jet_entry_par_south > 0):
@@ -940,11 +972,22 @@ class Disk_wind(Jet):
             if (jet_entry_par_north_num < jet_entry_par_south_num):
                 # The ray goes through the north lobe. The line-of-sight will
                 # have a jet entry and jet exit point.
-                jet_pos_parameters = np.linspace(jet_entry_par_north, \
-                                     jet_exit_par_north, number_of_gridpoints)
-                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-                jet_entry_par      = jet_entry_par_north
-                jet_exit_par       = jet_exit_par_north
+
+                if jet_pathlength_north < max_pathlength:
+
+                    jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                         jet_exit_par_north, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                    jet_entry_par      = jet_entry_par_north
+                    jet_exit_par       = jet_exit_par_north
+
+                else:
+
+                    jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                         jet_entry_par_north + max_pathlength, number_of_gridpoints)
+                    self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                    jet_entry_par      = jet_entry_par_north
+                    jet_exit_par       = jet_exit_par_north
 
             elif (jet_exit_par_north_num < jet_exit_par_south_num):
                 # The ray goes through the south lobe The line-of-sight will
@@ -962,13 +1005,22 @@ class Disk_wind(Jet):
         elif (jet_entry_par_north_num > 0 and jet_exit_par_south_num < 0):
             # The ray goes through the north lobe. The line-of-sight will
             # have a jet entry and jet exit point.
-            jet_pos_parameters = np.linspace(jet_entry_par_north, \
-                                 jet_exit_par_north, number_of_gridpoints)
-            self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
-            jet_entry_par      = jet_entry_par_north
-            jet_exit_par       = jet_exit_par_north
 
+            if jet_pathlength_north < max_pathlength:
 
+                jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                     jet_exit_par_north, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                jet_entry_par      = jet_entry_par_north
+                jet_exit_par       = jet_exit_par_north
+
+            else:
+
+                jet_pos_parameters = np.linspace(jet_entry_par_north, \
+                                     jet_entry_par_north + max_pathlength, number_of_gridpoints)
+                self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
+                jet_entry_par      = jet_entry_par_north
+                jet_exit_par       = jet_exit_par_north
 
         elif (jet_entry_par_north_num < 0 and jet_entry_par_south_num < 0)\
                 and\
@@ -979,7 +1031,7 @@ class Disk_wind(Jet):
             jet_entry_par      = np.copy(jet_exit_par_north)
             jet_exit_par       = None
             jet_pos_parameters = np.linspace(jet_entry_par, \
-                                 jet_entry_par + 100., number_of_gridpoints)
+                                 jet_entry_par + max_pathlength, number_of_gridpoints)
             self.gridpoints    = origin_ray + np.outer(jet_pos_parameters, self.ray)
 
         else:

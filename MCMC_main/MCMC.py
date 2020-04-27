@@ -155,7 +155,7 @@ def ln_likelihood(pars,
                 model_spectra[phase][spectrum] = model_spectrum
 
     if return_intensity==True:
-        
+
         return chi_squared, ln_likelihood, model_spectra
 
     else:
@@ -198,7 +198,7 @@ def model(pars, pars_walker, pars_add, wavelengths_spectra, jet, postAGB):
         ###### For each ray of light from a grid point on the post-AGB star,
         ###### we calculate the absorption by the jet
 
-        jet._set_gridpoints(coordAGB, pars['OTHER']['gridpoints_LOS'])
+        jet._set_gridpoints(coordAGB, pars['OTHER']['gridpoints_LOS'], pars['OTHER']['max_pathlength'])
 
         if jet.gridpoints is None:
             ###### The ray does not pass through the jet
