@@ -1,7 +1,7 @@
 # MCMC main
 
 This is a Markov-chain Monte Carlo (MCMC) fitting routine to fit model spectra to observations of jets in evolved binary systems.
-We implement the emcee-package by Dan Foreman-Mackey
+We implemented the emcee-package by Dan Foreman-Mackey
 https://emcee.readthedocs.io/en/stable/
 
 
