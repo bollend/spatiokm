@@ -1,4 +1,4 @@
-# MCMC main
+# spatiokm
 
 This is a Markov-chain Monte Carlo (MCMC) fitting routine to fit model spectra to observations of jets in evolved binary systems.
 We implemented the emcee-package by Dan Foreman-Mackey
